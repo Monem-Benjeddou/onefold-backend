@@ -1,0 +1,55 @@
+# === Development Optimized Dockerfile ===
+FROM python:3.11-slim-bookworm
+
+# Set environment variables for Python
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app:$PYTHONPATH
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install only essential system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    netcat-openbsd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Create necessary directories
+RUN mkdir -p /app/docker
+
+# Set Python path
+ENV PYTHONPATH=/app:/app/api:$PYTHONPATH
+
+# Copy and install minimal requirements for development
+COPY api/requirements-dev.txt /app/requirements.txt
+
+# Install Python dependencies
+RUN pip install --upgrade pip wheel setuptools && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . /app/
+
+# Copy entrypoint scripts
+COPY docker/backend/entrypoint.sh /app/docker/entrypoint.sh
+COPY docker/backend/entrypoint-beat.sh /app/docker/entrypoint-beat.sh
+COPY docker/backend/wait-for-postgres.sh /app/docker/wait-for-postgres.sh
+
+# Make scripts executable
+RUN chmod +x /app/docker/entrypoint.sh \
+    && chmod +x /app/docker/entrypoint-beat.sh \
+    && chmod +x /app/docker/wait-for-postgres.sh
+
+# Expose port
+EXPOSE 8009
+
+# Set environment variable for .env file path
+ENV ENV_FILE_PATH=.env
+
+# Default command
+CMD ["sh", "/app/docker/entrypoint.sh"]

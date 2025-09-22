@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build images
+        run: |
+          cd noev-backend
+          docker compose build
+
+      - name: Start services
+        run: |
+          cd noev-backend
+          docker compose up -d
+
+      - name: Wait for Django
+        run: |
+          timeout 60 bash -c 'until curl -fsS http://localhost:8000/health/; do sleep 2; done'
+
+      - name: Run migrations
+        run: |
+          cd noev-backend
+          make migrate
+
+      - name: Basic API check
+        run: |
+          curl -fsS http://localhost:8000/api/schema/ > /dev/null
+
+      - name: Stop services
+        if: always()
+        run: |
+          cd noev-backend
+          docker compose down -v
+
+

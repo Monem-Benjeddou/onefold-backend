@@ -1,0 +1,8 @@
+
+
+
+
+
+"kolct_user" "md5<hash>"
+"postgres" "md5<hash>"
+"readonly_user" "md5<hash>"

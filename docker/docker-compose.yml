@@ -1,0 +1,168 @@
+services:
+  nevo_db:
+    image: postgres:15-alpine
+    container_name: ${PROJECT_NAME:-nevo}_postgres_${CONTAINER_SUFFIX:-dev}_db
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data/
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=128MB
+      -c max_connections=100
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=4MB
+      -c max_wal_size=1GB
+      -c min_wal_size=256MB
+    environment:
+      - POSTGRES_USER=${DATABASE_USER:-postgres}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - POSTGRES_DB=${DATABASE_NAME:-nevo_db}
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      app_network:
+        aliases:
+          - nevo_db
+
+  nevo_redis:
+    image: redis:alpine
+    container_name: ${PROJECT_NAME:-nevo}_redis_${CONTAINER_SUFFIX:-dev}
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6380}:6379"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  nevo-backend:
+    container_name: ${PROJECT_NAME:-nevo}_django_${CONTAINER_SUFFIX:-dev}_backend
+    build:
+      context: ..
+      dockerfile: docker/backend/Dockerfile
+      target: ${BACKEND_TARGET:-${DOCKER_TARGET:-development}}
+      args:
+        - ENV=${ENV:-1}
+    working_dir: /app/api
+    volumes:
+      - ../api:/app/api
+      - ./backend:/app/docker
+      - ./config.yml:/app/docker/config.yml
+      - ../api/staticfiles:/app/staticfiles
+      - ../api/media:/app/media
+    ports:
+      - "${API_PORT:-8009}:${API_PORT:-8009}"
+    env_file:
+      - ../.env
+    environment:
+      - PYTHONMALLOC=malloc
+      - MALLOC_TRIM_THRESHOLD_=100000
+      - PYTHONHASHSEED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DJANGO_SETTINGS_MODULE=api.config.settings.development
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
+      - GUNICORN_THREADS=${GUNICORN_THREADS:-2}
+      - GUNICORN_MAX_REQUESTS=${GUNICORN_MAX_REQUESTS:-500}
+      - GUNICORN_MAX_REQUESTS_JITTER=${GUNICORN_MAX_REQUESTS_JITTER:-25}
+    depends_on:
+      nevo_db:
+        condition: service_healthy
+      nevo_redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  nevo_celery_worker:
+    container_name: ${PROJECT_NAME:-nevo}_celery_${CONTAINER_SUFFIX:-dev}_worker
+    build:
+      context: ..
+      dockerfile: docker/backend/Dockerfile
+      target: ${BACKEND_TARGET:-${DOCKER_TARGET:-development}}
+      args:
+        - ENV=${ENV:-1}
+    command: celery -A api.config worker -l info --concurrency=${CELERY_WORKER_CONCURRENCY:-2} --max-tasks-per-child=50 --pool=prefork
+    working_dir: /app/api
+    volumes:
+      - ../api:/app/api
+      - ./backend:/app/docker
+      - ./config.yml:/app/docker/config.yml
+      - ../api/staticfiles:/app/staticfiles
+      - ../api/media:/app/media
+    env_file:
+      - ../.env
+    environment:
+      - CELERY_OPTIMIZATION_PROFILE=high_memory
+      - PYTHONMALLOC=malloc
+      - MALLOC_TRIM_THRESHOLD_=100000
+      - CELERY_WORKER_CONCURRENCY=${CELERY_WORKER_CONCURRENCY:-8}
+      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER:-1}
+      - CELERY_WORKER_MAX_MEMORY_PER_CHILD=${CELERY_WORKER_MAX_MEMORY_PER_CHILD:-400000}
+      - CELERY_RESULT_BACKEND_MAX_CONNECTIONS=${CELERY_RESULT_BACKEND_MAX_CONNECTIONS:-50}
+    depends_on:
+      - nevo-backend
+      - nevo_redis
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  nevo_celery_beat:
+    container_name: ${PROJECT_NAME:-nevo}_celery_${CONTAINER_SUFFIX:-dev}_beat
+    build:
+      context: ..
+      dockerfile: docker/backend/Dockerfile
+      target: ${BACKEND_TARGET:-${DOCKER_TARGET:-development}}
+      args:
+        - ENV=${ENV:-1}
+    command: celery -A api.config beat -l info
+    working_dir: /app/api
+    volumes:
+      - ../api:/app/api
+      - ./backend:/app/docker
+      - ./config.yml:/app/docker/config.yml
+      - ../api/staticfiles:/app/staticfiles
+      - ../api/media:/app/media
+    env_file:
+      - ../.env
+    environment:
+      - PYTHONMALLOC=malloc
+      - MALLOC_TRIM_THRESHOLD_=100000
+      - PYTHONHASHSEED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DJANGO_SETTINGS_MODULE=api.config.settings.development
+    depends_on:
+      nevo_db:
+        condition: service_healthy
+      nevo_redis:
+        condition: service_started
+      nevo-backend:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - app_network
+
+volumes:
+  postgres_data_dev:
+    name: ${PROJECT_NAME:-nevo}_postgres_data_${CONTAINER_SUFFIX:-dev}
+  redis_data:
+    name: ${PROJECT_NAME:-nevo}_redis_data_${CONTAINER_SUFFIX:-dev}
+  redis-config:
+    name: ${PROJECT_NAME:-nevo}_redis_config_${CONTAINER_SUFFIX:-dev}
+
+networks:
+  app_network:
+    name: ${PROJECT_NAME:-nevo}_network_${CONTAINER_SUFFIX:-dev}
+    driver: bridge

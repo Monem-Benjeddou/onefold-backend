@@ -1,0 +1,65 @@
+"""
+Jazzmin (Django Admin Theme) configuration for version 3.0.1
+"""
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Kolct Admin",
+    "site_brand": "Kolct Admin",
+    "site_header": "Kolct Administration",
+    "welcome_sign": "Welcome to Kolct Admin",
+    "copyright": "Kolct Ltd",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "cards": "fas fa-id-card",
+        "cards.card": "fas fa-id-card",
+        "cards.collection": "fas fa-layer-group",
+        "cards.category": "fas fa-tags",
+    },
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": ["auth", "cards", "payment", "wallet", "accounts"],
+    "custom_css": None,
+    "custom_js": None,
+    "show_ui_builder": False,
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+}
+
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": False,
+    "accent": "accent-primary",
+    "navbar": "navbar-light",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": False,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+    "actions_sticky": False,
+}

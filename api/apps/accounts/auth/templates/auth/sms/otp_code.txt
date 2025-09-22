@@ -1,0 +1,1 @@
+Your login OTP code is: {{ code }}. This code will expire in 10 minutes.
