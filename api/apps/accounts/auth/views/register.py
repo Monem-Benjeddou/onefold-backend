@@ -45,11 +45,14 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        user.is_active = False
-        user.is_email_verified = False
+        # For development: auto-activate users
+        # user.is_active = False
+        # user.is_email_verified = False
+        user.is_active = True
+        user.is_email_verified = True
 
         message = _(
-            "User registered successfully. Please verify to complete registration."
+            "User registered successfully."
         )
 
         user.save()

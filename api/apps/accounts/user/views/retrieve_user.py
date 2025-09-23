@@ -9,14 +9,14 @@ from django.utils.translation import gettext_lazy as _
 from core.decorators.error_handler import api_error_handler
 from core.ratelimiter import dynamic_rate_limit
 from apps.accounts.user.models import User
-from apps.accounts.profile.serializers import ProfileSerializer
+from apps.accounts.user.serializers import UserSerializer
 
 
 @extend_schema(
     tags=["Users"],
     description="Retrieve user details by user UUID (public access)",
     responses={
-        200: ProfileSerializer,
+        200: UserSerializer,
         404: {"description": "User not found"},
     },
 )
@@ -26,16 +26,9 @@ class RetrieveUserView(RetrieveAPIView):
     Returns full user information, public access (no authentication required).
     """
 
-    serializer_class = ProfileSerializer
+    serializer_class = UserSerializer
     permission_classes = [AllowAny]
-    queryset = User.objects.select_related(
-        "country", "influencer_profile"
-    ).prefetch_related(
-        "influencer_profile__profile_images",
-        "influencer_profile__cover_images",
-        "followers",
-        "following",
-    )
+    queryset = User.objects.all()
     lookup_field = "pk"
 
     def get_object(self):

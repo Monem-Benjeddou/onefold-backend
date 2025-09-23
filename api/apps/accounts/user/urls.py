@@ -16,8 +16,6 @@ from apps.accounts.user.views import (
     SelfDeactivationView,
     AccountStatusView,
 )
-from apps.relationships.views.user_follow import UserFollowView
-
 urlpatterns = [
     path("create/", CreateUserView.as_view(), name="create-user"),
     path("<uuid:pk>/update/", UpdateUserView.as_view(), name="update-user"),
@@ -37,5 +35,4 @@ urlpatterns = [
     path("stats/", AdminStatsView.as_view(), name="admin-stats"),
     path("me/deactivate/", SelfDeactivationView.as_view(), name="self-deactivate"),
     path("me/status/", AccountStatusView.as_view(), name="account-status"),
-    path("<uuid:pk>/follow/", UserFollowView.as_view(), name="user-follow"),
 ]

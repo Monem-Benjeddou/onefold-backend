@@ -7,6 +7,7 @@ from decouple import config
 AUTH_USER_MODEL = "user.User"
 
 AUTHENTICATION_BACKENDS = (
+    "core.backends.auth.UsernameEmailPhoneNumberAuthBackend",
     "social_core.backends.google.GoogleOAuth2",
     "drf_social_oauth2.backends.DjangoOAuth2",
     "django.contrib.auth.backends.ModelBackend",

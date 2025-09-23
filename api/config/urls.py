@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/v1/auth/", include("api.apps.accounts.auth.urls")),
     path("api/v1/founders/", include("api.apps.accounts.founder.urls")),
     path("api/v1/companies/", include("api.apps.company.urls")),
+    path("api/v1/users/", include("api.apps.accounts.user.urls")),
     path("api/v1/stakeholders/", include("api.apps.stakeholder.urls")),
     path("api/v1/competitors/", include("api.apps.competitor.urls")),
     path("api/v1/revenue/", include("api.apps.revenue.urls")),

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.company.models import StartupProfile, CompanyMember, TargetedMarket, StartupDevelopmentStage
+from apps.company.models import StartupProfile, CompanyMember, TargetedMarket, StartupDevelopmentStage, StartupServiceProduct
 from apps.accounts.founder.models import FounderProfile
 
 
@@ -44,12 +44,20 @@ class StartupDevelopmentStageSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class StartupServiceProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StartupServiceProduct
+        fields = ["id", "name", "description", "is_active"]
+        read_only_fields = ["id"]
+
+
 class StartupProfileSerializer(serializers.ModelSerializer):
     """Complete serializer for StartupProfile with nested relationships."""
     
     primary_founder_name = serializers.CharField(source='primary_founder.full_name', read_only=True)
     primary_founder_id = serializers.IntegerField(source='primary_founder.id', read_only=True)
     members = CompanyMemberSerializer(many=True, read_only=True)
+    services_and_products = StartupServiceProductSerializer(many=True, read_only=True)
     targeted_markets = TargetedMarketSerializer(many=True, read_only=True)
     development_stage = StartupDevelopmentStageSerializer(read_only=True)
     
@@ -72,6 +80,18 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
     
     members = CompanyMemberSerializer(many=True, required=False)
     targeted_markets = TargetedMarketSerializer(many=True, required=False)
+    services_and_products = StartupServiceProductSerializer(many=True, required=False)
+
+    # Make optional URL/file/image fields explicitly optional and tolerant to blanks
+    website_link = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    linkedin_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    twitter_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    facebook_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    instagram_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    youtube_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    pitch_deck_link = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    logo = serializers.ImageField(required=False, allow_null=True)
+    pitch_deck_file = serializers.FileField(required=False, allow_null=True)
     
     class Meta:
         model = StartupProfile
@@ -80,22 +100,30 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
             'founded_year', 'bio', 'services_and_products', 'linkedin_url',
             'twitter_url', 'facebook_url', 'instagram_url', 'youtube_url',
             'logo', 'pitch_deck_link', 'pitch_deck_file', 'is_verified',
-            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets'
+            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets', 'services_and_products'
         ]
     
     def create(self, validated_data):
         """Create startup profile with nested member and market data."""
         members_data = validated_data.pop('members', [])
         markets_data = validated_data.pop('targeted_markets', [])
+        services_products_data = validated_data.pop('services_and_products', [])
         
-        # Set primary founder if not provided
+        # Ensure creator is owner/primary founder
         if 'primary_founder' not in validated_data:
             user = self.context['request'].user
-            try:
-                founder_profile = user.founder_profile
-                validated_data['primary_founder'] = user
-            except FounderProfile.DoesNotExist:
-                pass
+            validated_data['primary_founder'] = user
+
+        # Normalize empty strings to None for optional fields
+        optional_fields = [
+            'website_link', 'linkedin_url', 'twitter_url', 'facebook_url',
+            'instagram_url', 'youtube_url', 'pitch_deck_link', 'logo',
+            'pitch_deck_file'
+        ]
+        for field_name in optional_fields:
+            value = validated_data.get(field_name, None)
+            if value == "":
+                validated_data[field_name] = None
         
         startup_profile = StartupProfile.objects.create(**validated_data)
         
@@ -106,6 +134,10 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
         # Create targeted markets
         for market in markets_data:
             TargetedMarket.objects.create(startup=startup_profile, **market)
+
+        # Create services/products
+        for item in services_products_data:
+            StartupServiceProduct.objects.create(startup=startup_profile, **item)
         
         return startup_profile
 
@@ -115,6 +147,7 @@ class StartupProfileUpdateSerializer(serializers.ModelSerializer):
     
     members = CompanyMemberSerializer(many=True, required=False)
     targeted_markets = TargetedMarketSerializer(many=True, required=False)
+    services_and_products = StartupServiceProductSerializer(many=True, required=False)
     
     class Meta:
         model = StartupProfile
@@ -123,13 +156,14 @@ class StartupProfileUpdateSerializer(serializers.ModelSerializer):
             'founded_year', 'bio', 'services_and_products', 'linkedin_url',
             'twitter_url', 'facebook_url', 'instagram_url', 'youtube_url',
             'logo', 'pitch_deck_link', 'pitch_deck_file', 'is_verified',
-            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets'
+            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets', 'services_and_products'
         ]
     
     def update(self, instance, validated_data):
         """Update startup profile with nested member and market data."""
         members_data = validated_data.pop('members', None)
         markets_data = validated_data.pop('targeted_markets', None)
+        services_products_data = validated_data.pop('services_and_products', None)
         
         # Update basic fields
         for attr, value in validated_data.items():
@@ -151,5 +185,11 @@ class StartupProfileUpdateSerializer(serializers.ModelSerializer):
             # Create new ones
             for market in markets_data:
                 TargetedMarket.objects.create(startup=instance, **market)
+
+        # Update services/products if provided
+        if services_products_data is not None:
+            instance.services_and_products.all().delete()
+            for item in services_products_data:
+                StartupServiceProduct.objects.create(startup=instance, **item)
         
         return instance
