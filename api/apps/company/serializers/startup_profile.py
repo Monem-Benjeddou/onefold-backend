@@ -39,16 +39,38 @@ class StartupDevelopmentStageSerializer(serializers.ModelSerializer):
     class Meta:
         model = StartupDevelopmentStage
         fields = [
-            'id', 'stage', 'stage_name', 'assigned_date', 'notes'
+            'id', 'startup', 'stage', 'stage_name', 'assigned_date', 'notes'
         ]
         read_only_fields = ['id']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Normalize UUIDs to strings for stable test expectations
+        data['id'] = str(instance.id)
+        data['startup'] = str(instance.startup_id) if getattr(instance, 'startup_id', None) else data.get('startup')
+        data['stage'] = str(instance.stage_id) if getattr(instance, 'stage_id', None) else data.get('stage')
+        return data
+
 
 class StartupServiceProductSerializer(serializers.ModelSerializer):
+    # When used nested under StartupProfile create/update, startup is provided by parent
+    startup = serializers.PrimaryKeyRelatedField(
+        queryset=StartupProfile.objects.all(),
+        help_text="ID of the startup this service/product belongs to",
+        required=False,
+        allow_null=True,
+    )
+    
     class Meta:
         model = StartupServiceProduct
-        fields = ["id", "name", "description", "is_active"]
+        fields = ["id", "startup", "name", "description", "is_active"]
         read_only_fields = ["id"]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['id'] = str(instance.id)
+        data['startup'] = str(instance.startup_id) if getattr(instance, 'startup_id', None) else data.get('startup')
+        return data
 
 
 class StartupProfileSerializer(serializers.ModelSerializer):
@@ -82,7 +104,6 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
     targeted_markets = TargetedMarketSerializer(many=True, required=False)
     services_and_products = StartupServiceProductSerializer(many=True, required=False)
 
-    # Make optional URL/file/image fields explicitly optional and tolerant to blanks
     website_link = serializers.URLField(required=False, allow_blank=True, allow_null=True)
     linkedin_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
     twitter_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)

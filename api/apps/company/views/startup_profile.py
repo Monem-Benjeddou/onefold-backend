@@ -77,7 +77,7 @@ class StartupProfileViewSet(viewsets.ModelViewSet):
         """Filter queryset based on user permissions."""
         queryset = super().get_queryset()
         
-        # If user is not staff, only show their own startups or public ones
+
         if not self.request.user.is_staff:
             queryset = queryset.filter(
                 models.Q(primary_founder=self.request.user) | 

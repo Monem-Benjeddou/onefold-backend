@@ -28,8 +28,23 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     "rest_framework",
     "rest_framework.authtoken",
-    "apps.accounts.user",  # The correct user app
-    "apps.appointments",
+    "django_countries",
+    "phonenumber_field",
+    "oauth2_provider",
+    "core",
+    "apps.accounts.user",
+    "apps.accounts.auth",
+    "apps.accounts.founder",
+    "apps.company",
+    "apps.competitor",
+    "apps.countries",
+    "apps.files",
+    "apps.funding",
+    "apps.internationalization",
+    "apps.notifications",
+    "apps.privacy",
+    "apps.revenue",
+    "apps.stakeholder",
 ]
 
 MIDDLEWARE = [
@@ -67,7 +82,12 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
+        "OPTIONS": {
+            "timeout": 30,
+            "check_same_thread": False,
+        },
         "TEST": {
+            "NAME": ":memory:",
             "MIRROR": None,
         },
     }
@@ -156,13 +176,13 @@ sys.modules["imageio_ffmpeg"] = MagicMock()
 os.environ["IMAGEIO_FFMPEG_EXE"] = "ffmpeg"
 
 
+# Disable problematic migrations for SQLite testing
 class DisableMigrations:
     def __contains__(self, item):
         return True
 
     def __getitem__(self, item):
         return None
-
 
 MIGRATION_MODULES = DisableMigrations()
 
@@ -176,3 +196,13 @@ CELERY_ALWAYS_EAGER = True
 
 
 ALLOWED_HOSTS = ["*"]
+
+# Additional SQLite-specific settings for testing
+USE_TZ = True
+TIME_ZONE = "UTC"
+
+# Disable some features that might cause issues with SQLite
+DATABASE_ROUTERS = []
+
+# Ensure we're using SQLite for all operations
+DATABASE_CONNECTION_POOLING = None

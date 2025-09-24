@@ -1,12 +1,12 @@
-# Files Module
+
 
 This module handles file upload and management functionality following Django and DRF best practices.
 
-## Architecture
+
 
 The module has been refactored to follow a clean, modular architecture with separation of concerns:
 
-### Directory Structure
+
 
 ```
 apps/files/

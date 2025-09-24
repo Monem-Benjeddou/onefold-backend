@@ -16,6 +16,13 @@ class TargetedMarketSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created', 'updated']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Normalize UUIDs to strings
+        data['id'] = str(instance.id)
+        data['startup'] = str(instance.startup_id) if getattr(instance, 'startup_id', None) else data.get('startup')
+        return data
+
 
 class TargetedMarketCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating TargetedMarket records."""
