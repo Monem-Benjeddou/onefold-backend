@@ -1,18 +1,18 @@
-# Files Module
+
 
 This module handles file upload and management functionality following Django and DRF best practices.
 
-## Architecture
+
 
 The module has been refactored to follow a clean, modular architecture with separation of concerns:
 
-### Directory Structure
+
 
 ```
 apps/files/
 ├── views/
 │   ├── __init__.py
-│   ├── create.py          # File upload view (POST)
+│   ├── create.py          
 │   └── list.py            # File listing view (GET)
 ├── serializers/
 │   ├── __init__.py

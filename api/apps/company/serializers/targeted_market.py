@@ -16,6 +16,13 @@ class TargetedMarketSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created', 'updated']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        data['id'] = str(instance.id)
+        data['startup'] = str(instance.startup_id) if getattr(instance, 'startup_id', None) else data.get('startup')
+        return data
+
 
 class TargetedMarketCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating TargetedMarket records."""
@@ -32,7 +39,7 @@ class TargetedMarketCreateSerializer(serializers.ModelSerializer):
         startup = data.get('startup')
         is_primary = data.get('is_primary', False)
         
-        # If setting as primary, ensure no other primary exists for this startup
+
         if is_primary and startup:
             if TargetedMarket.objects.filter(startup=startup, is_primary=True).exists():
                 raise serializers.ValidationError(
@@ -56,7 +63,7 @@ class TargetedMarketUpdateSerializer(serializers.ModelSerializer):
         """Validate market data."""
         is_primary = data.get('is_primary', False)
         
-        # If setting as primary, ensure no other primary exists for this startup
+
         if is_primary and self.instance:
             if TargetedMarket.objects.filter(
                 startup=self.instance.startup, 

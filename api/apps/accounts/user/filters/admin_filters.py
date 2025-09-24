@@ -2,7 +2,6 @@ from django_filters import rest_framework as filters
 from django.utils.translation import gettext_lazy as _
 from apps.accounts.user.models import User
 from apps.accounts.user.constants import ROLE_CHOICES
-from core.filters.issuer_filters import BaseIssuerFilterSet
 
 
 class UserFilter(filters.FilterSet):
@@ -70,14 +69,3 @@ class UserFilter(filters.FilterSet):
             "created_after",
             "created_before",
         ]
-
-
-class IssuerFilter(BaseIssuerFilterSet):
-    """
-    Filter for Issuer users specifically - inherits comprehensive filtering from BaseIssuerFilterSet.
-
-    This filter provides all the advanced filtering capabilities while maintaining
-    backward compatibility with existing API endpoints.
-    """
-
-    pass

@@ -4,7 +4,6 @@ from django.conf import settings
 from core.abstract.models import AbstractAutoIncrementModel
 from apps.accounts.user.models import User
 
-
 def startup_logo_path(instance, filename):
     return f"startups/{instance.id}/logo/{filename}"
 
@@ -18,7 +17,7 @@ class StartupProfile(AbstractAutoIncrementModel):
     Main startup/company profile containing core business information.
     """
     
-    # Core Information
+
     startup_name = models.CharField(
         max_length=255,
         help_text=_("Name of the startup/company")
@@ -44,18 +43,14 @@ class StartupProfile(AbstractAutoIncrementModel):
         help_text=_("Year the company was founded")
     )
     
-    # Business Information
+
     bio = models.TextField(
         blank=True,
         help_text=_("Company description and mission")
     )
     
-    services_and_products = models.TextField(
-        blank=True,
-        help_text=_("Description of services and products offered")
-    )
     
-    # Social Media Links
+
     linkedin_url = models.URLField(
         blank=True,
         null=True,
@@ -86,7 +81,7 @@ class StartupProfile(AbstractAutoIncrementModel):
         help_text=_("Company YouTube channel URL")
     )
     
-    # Media and Documents
+
     logo = models.ImageField(
         upload_to=startup_logo_path,
         null=True,
@@ -107,7 +102,7 @@ class StartupProfile(AbstractAutoIncrementModel):
         help_text=_("Pitch deck file upload")
     )
     
-    # Status and Verification
+
     is_verified = models.BooleanField(
         default=False,
         help_text=_("Whether this startup profile is verified")
@@ -171,4 +166,5 @@ class StartupProfile(AbstractAutoIncrementModel):
         from datetime import date
         current_year = date.today().year
         return current_year - self.founded_year
+
 

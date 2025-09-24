@@ -68,7 +68,7 @@ class Command(BaseCommand):
                     self.style.SUCCESS(f'Created development stage: {stage.name}')
                 )
             else:
-                # Update existing stage
+
                 for key, value in stage_data.items():
                     setattr(stage, key, value)
                 stage.save()

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from core.permissions import StartupAccessPermission
 from rest_framework import filters
 from django.db import models
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
@@ -55,7 +56,7 @@ class StartupProfileViewSet(viewsets.ModelViewSet):
     """
     
     queryset = StartupProfile.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, StartupAccessPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
         'startup_name', 'startup_industry', 'location', 'bio', 
@@ -76,7 +77,7 @@ class StartupProfileViewSet(viewsets.ModelViewSet):
         """Filter queryset based on user permissions."""
         queryset = super().get_queryset()
         
-        # If user is not staff, only show their own startups or public ones
+
         if not self.request.user.is_staff:
             queryset = queryset.filter(
                 models.Q(primary_founder=self.request.user) | 

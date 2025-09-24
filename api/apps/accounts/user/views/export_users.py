@@ -23,7 +23,6 @@ from apps.accounts.user.serializers import UserExportSerializer
 from core.abstract.permissions import ExportPermission
 import logging
 
-
 audit_logger = logging.getLogger("security.exports")
 
 

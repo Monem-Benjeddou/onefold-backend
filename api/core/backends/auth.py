@@ -9,12 +9,24 @@ User = get_user_model()
 
 class UsernameEmailPhoneNumberAuthBackend(BaseBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
+        # Guard against empty username from BasicAuth or other sources
+        if not username:
+            return None
         try:
             user = User.objects.get(
-                Q(username=username) | Q(email=username) | Q(phone_number=username)
+                Q(username=username) | Q(email__iexact=username) | Q(phone_number=username)
             )
         except User.DoesNotExist:
             return None
+        except User.MultipleObjectsReturned:
+            # If duplicates exist (e.g., legacy data), prefer exact email match first
+            user = (
+                User.objects.filter(email__iexact=username).first()
+                or User.objects.filter(username=username).first()
+                or User.objects.filter(phone_number=username).first()
+            )
+            if not user:
+                return None
 
         if user.check_password(password) and self.user_can_authenticate(user):
             return user

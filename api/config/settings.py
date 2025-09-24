@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.revenue",
     "apps.stakeholder",
     "apps.notifications",
+
 ]
 
 MIDDLEWARE = [

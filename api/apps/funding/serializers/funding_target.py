@@ -35,7 +35,7 @@ class FundingTargetCreateSerializer(serializers.ModelSerializer):
         """Validate funding target data."""
         startup = data.get('startup')
         
-        # Check if startup already has a funding target
+
         if startup and hasattr(startup, 'funding_target'):
             raise serializers.ValidationError(
                 "This startup already has a funding target."

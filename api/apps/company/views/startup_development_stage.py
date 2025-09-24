@@ -38,7 +38,7 @@ class StartupDevelopmentStageViewSet(viewsets.ModelViewSet):
         """Filter queryset based on user permissions."""
         queryset = super().get_queryset()
         
-        # If user is not staff, only show their own startup stages
+
         if not self.request.user.is_staff:
             queryset = queryset.filter(startup__primary_founder=self.request.user)
         

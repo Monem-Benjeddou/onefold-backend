@@ -38,7 +38,7 @@ class FundingTargetViewSet(viewsets.ModelViewSet):
         """Filter queryset based on user permissions."""
         queryset = super().get_queryset()
         
-        # If user is not staff, only show funding targets of their startups
+
         if not self.request.user.is_staff:
             queryset = queryset.filter(startup__primary_founder=self.request.user)
         
@@ -90,7 +90,7 @@ class FundingTargetViewSet(viewsets.ModelViewSet):
         """Get funding targets with high target amounts."""
         queryset = self.get_queryset().filter(
             target_amount__isnull=False,
-            target_amount__gte=1000000  # $1M and above
+            target_amount__gte=1000000
         ).order_by('-target_amount')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)

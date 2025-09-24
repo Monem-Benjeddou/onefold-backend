@@ -15,11 +15,35 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "REDOC_DIST": "SIDECAR",
     "COMPONENT_SPLIT_REQUEST": True,
+    # Ensure Swagger keeps auth between requests and uses the correct API base path
+    "SWAGGER_UI_SETTINGS": {"persistAuthorization": True},
+    "SCHEMA_PATH_PREFIX": "/api",
     "OAUTH2_FLOWS": ["password"],
     "OAUTH2_SCOPES": {
         "read": "Read scope",
         "write": "Write scope",
     },
+    # Expose both JWT Bearer and HTTP Basic in Swagger UI
+    "COMPONENTS": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"',
+            },
+            "basicAuth": {
+                "type": "http",
+                "scheme": "basic",
+                "description": "HTTP Basic authentication (email as username)",
+            },
+        }
+    },
+    # Default security: allow either Bearer or Basic
+    "SECURITY": [
+        {"bearerAuth": []},
+        {"basicAuth": []},
+    ],
 }
 
 

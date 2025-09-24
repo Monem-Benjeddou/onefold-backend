@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.company.models import StartupProfile, CompanyMember, TargetedMarket, StartupDevelopmentStage
+from apps.company.models import StartupProfile, CompanyMember, TargetedMarket, StartupDevelopmentStage, StartupServiceProduct
 from apps.accounts.founder.models import FounderProfile
 
 
@@ -39,9 +39,38 @@ class StartupDevelopmentStageSerializer(serializers.ModelSerializer):
     class Meta:
         model = StartupDevelopmentStage
         fields = [
-            'id', 'stage', 'stage_name', 'assigned_date', 'notes'
+            'id', 'startup', 'stage', 'stage_name', 'assigned_date', 'notes'
         ]
         read_only_fields = ['id']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        data['id'] = str(instance.id)
+        data['startup'] = str(instance.startup_id) if getattr(instance, 'startup_id', None) else data.get('startup')
+        data['stage'] = str(instance.stage_id) if getattr(instance, 'stage_id', None) else data.get('stage')
+        return data
+
+
+class StartupServiceProductSerializer(serializers.ModelSerializer):
+
+    startup = serializers.PrimaryKeyRelatedField(
+        queryset=StartupProfile.objects.all(),
+        help_text="ID of the startup this service/product belongs to",
+        required=False,
+        allow_null=True,
+    )
+    
+    class Meta:
+        model = StartupServiceProduct
+        fields = ["id", "startup", "name", "description", "is_active"]
+        read_only_fields = ["id"]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['id'] = str(instance.id)
+        data['startup'] = str(instance.startup_id) if getattr(instance, 'startup_id', None) else data.get('startup')
+        return data
 
 
 class StartupProfileSerializer(serializers.ModelSerializer):
@@ -50,6 +79,7 @@ class StartupProfileSerializer(serializers.ModelSerializer):
     primary_founder_name = serializers.CharField(source='primary_founder.full_name', read_only=True)
     primary_founder_id = serializers.IntegerField(source='primary_founder.id', read_only=True)
     members = CompanyMemberSerializer(many=True, read_only=True)
+    services_and_products = StartupServiceProductSerializer(many=True, read_only=True)
     targeted_markets = TargetedMarketSerializer(many=True, read_only=True)
     development_stage = StartupDevelopmentStageSerializer(read_only=True)
     
@@ -72,6 +102,17 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
     
     members = CompanyMemberSerializer(many=True, required=False)
     targeted_markets = TargetedMarketSerializer(many=True, required=False)
+    services_and_products = StartupServiceProductSerializer(many=True, required=False)
+
+    website_link = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    linkedin_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    twitter_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    facebook_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    instagram_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    youtube_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    pitch_deck_link = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    logo = serializers.ImageField(required=False, allow_null=True)
+    pitch_deck_file = serializers.FileField(required=False, allow_null=True)
     
     class Meta:
         model = StartupProfile
@@ -80,32 +121,44 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
             'founded_year', 'bio', 'services_and_products', 'linkedin_url',
             'twitter_url', 'facebook_url', 'instagram_url', 'youtube_url',
             'logo', 'pitch_deck_link', 'pitch_deck_file', 'is_verified',
-            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets'
+            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets', 'services_and_products'
         ]
     
     def create(self, validated_data):
         """Create startup profile with nested member and market data."""
         members_data = validated_data.pop('members', [])
         markets_data = validated_data.pop('targeted_markets', [])
+        services_products_data = validated_data.pop('services_and_products', [])
         
-        # Set primary founder if not provided
+
         if 'primary_founder' not in validated_data:
             user = self.context['request'].user
-            try:
-                founder_profile = user.founder_profile
-                validated_data['primary_founder'] = user
-            except FounderProfile.DoesNotExist:
-                pass
+            validated_data['primary_founder'] = user
+
+
+        optional_fields = [
+            'website_link', 'linkedin_url', 'twitter_url', 'facebook_url',
+            'instagram_url', 'youtube_url', 'pitch_deck_link', 'logo',
+            'pitch_deck_file'
+        ]
+        for field_name in optional_fields:
+            value = validated_data.get(field_name, None)
+            if value == "":
+                validated_data[field_name] = None
         
         startup_profile = StartupProfile.objects.create(**validated_data)
         
-        # Create company members
+
         for member in members_data:
             CompanyMember.objects.create(startup=startup_profile, **member)
         
-        # Create targeted markets
+
         for market in markets_data:
             TargetedMarket.objects.create(startup=startup_profile, **market)
+
+
+        for item in services_products_data:
+            StartupServiceProduct.objects.create(startup=startup_profile, **item)
         
         return startup_profile
 
@@ -115,6 +168,7 @@ class StartupProfileUpdateSerializer(serializers.ModelSerializer):
     
     members = CompanyMemberSerializer(many=True, required=False)
     targeted_markets = TargetedMarketSerializer(many=True, required=False)
+    services_and_products = StartupServiceProductSerializer(many=True, required=False)
     
     class Meta:
         model = StartupProfile
@@ -123,33 +177,40 @@ class StartupProfileUpdateSerializer(serializers.ModelSerializer):
             'founded_year', 'bio', 'services_and_products', 'linkedin_url',
             'twitter_url', 'facebook_url', 'instagram_url', 'youtube_url',
             'logo', 'pitch_deck_link', 'pitch_deck_file', 'is_verified',
-            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets'
+            'is_public', 'is_active', 'primary_founder', 'members', 'targeted_markets', 'services_and_products'
         ]
     
     def update(self, instance, validated_data):
         """Update startup profile with nested member and market data."""
         members_data = validated_data.pop('members', None)
         markets_data = validated_data.pop('targeted_markets', None)
+        services_products_data = validated_data.pop('services_and_products', None)
         
-        # Update basic fields
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         
-        # Update members if provided
+
         if members_data is not None:
-            # Delete existing members
+
             instance.members.all().delete()
-            # Create new ones
+
             for member in members_data:
                 CompanyMember.objects.create(startup=instance, **member)
         
-        # Update targeted markets if provided
+
         if markets_data is not None:
-            # Delete existing markets
+
             instance.targeted_markets.all().delete()
-            # Create new ones
+
             for market in markets_data:
                 TargetedMarket.objects.create(startup=instance, **market)
+
+
+        if services_products_data is not None:
+            instance.services_and_products.all().delete()
+            for item in services_products_data:
+                StartupServiceProduct.objects.create(startup=instance, **item)
         
         return instance
