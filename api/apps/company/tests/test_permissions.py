@@ -404,7 +404,7 @@ class TestCompanyMemberPermissions(APITestCase):
         response = self.client.patch(url, {"position": "Senior Developer"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Test deleting a member
+
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
@@ -445,7 +445,7 @@ class TestDevelopmentStagePermissions(APITestCase):
         """Test that admins can manage development stages."""
         self.client.force_authenticate(user=self.admin_user)
         
-        # Test creating a stage
+
         url = reverse("development-stage-list")
         data = {
             "name": "Beta",
@@ -455,12 +455,12 @@ class TestDevelopmentStagePermissions(APITestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # Test updating a stage
+
         url = reverse("development-stage-detail", kwargs={"pk": self.stage.id})
         response = self.client.patch(url, {"name": "Updated MVP"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Test deleting a stage
+
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
@@ -468,7 +468,7 @@ class TestDevelopmentStagePermissions(APITestCase):
         """Test that founders cannot manage development stages."""
         self.client.force_authenticate(user=self.founder_user)
         
-        # Test creating a stage
+
         url = reverse("development-stage-list")
         data = {
             "name": "Beta",
@@ -478,12 +478,12 @@ class TestDevelopmentStagePermissions(APITestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # Test updating a stage
+
         url = reverse("development-stage-detail", kwargs={"pk": self.stage.id})
         response = self.client.patch(url, {"name": "Updated MVP"})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # Test deleting a stage
+
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -553,7 +553,7 @@ class TestTargetedMarketPermissions(APITestCase):
         """Test that founders can manage their own targeted markets."""
         self.client.force_authenticate(user=self.founder_user)
         
-        # Test creating a market
+
         url = reverse("targeted-market-list")
         data = {
             "startup": self.startup.id,
@@ -567,12 +567,12 @@ class TestTargetedMarketPermissions(APITestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # Test updating a market
+
         url = reverse("targeted-market-detail", kwargs={"pk": self.market.id})
         response = self.client.patch(url, {"market_name": "Updated SMEs"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Test deleting a market
+
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
@@ -580,12 +580,12 @@ class TestTargetedMarketPermissions(APITestCase):
         """Test that founders cannot manage other startups' markets."""
         self.client.force_authenticate(user=self.founder_user)
         
-        # Test updating another startup's market
+
         url = reverse("targeted-market-detail", kwargs={"pk": self.other_market.id})
         response = self.client.patch(url, {"market_name": "Hacked Market"})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # Test deleting another startup's market
+
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

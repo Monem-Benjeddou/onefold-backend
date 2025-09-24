@@ -289,7 +289,7 @@ class TestStartupDevelopmentStage:
 
         assert startup_stage.startup == startup_profile
         assert startup_stage.stage == development_stage
-        # assigned_date is auto_now_add; ensure it is set
+
         assert startup_stage.assigned_date is not None
         assert startup_stage.notes == "Currently working on MVP"
 
@@ -354,7 +354,7 @@ class TestTargetedMarket:
             is_primary=True
         )
 
-        # __str__ includes market type display in parentheses
+
         expected = f"{startup_profile.startup_name} - SMEs (Local)"
         assert str(market) == expected
 
@@ -410,7 +410,7 @@ class TestCompanyMember:
             position="CEO"
         )
 
-        # Model __str__ uses user's fullname
+
         expected = f"{user.fullname} - CEO at {startup_profile.startup_name}"
         assert str(member) == expected
 
@@ -420,7 +420,7 @@ class TestCompanyMember:
         """Test member type choices."""
         valid_types = ['founder', 'co_founder', 'employee', 'advisor', 'consultant', 'intern', 'contractor']
         
-        # Need unique user per membership due to unique_together(startup, user)
+
         from apps.accounts.user.tests.factories import AnyUserFactory
         for member_type in valid_types:
             unique_user = AnyUserFactory()

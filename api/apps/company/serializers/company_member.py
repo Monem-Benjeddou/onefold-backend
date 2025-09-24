@@ -43,7 +43,7 @@ class CompanyMemberCreateSerializer(serializers.ModelSerializer):
                 "Cannot have end date if currently a member."
             )
         
-        # Check for duplicate user-startup combination
+
         user = data.get('user')
         startup = data.get('startup')
         if user and startup:

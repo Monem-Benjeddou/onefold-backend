@@ -55,8 +55,8 @@ class StartupServiceProductViewSet(viewsets.ModelViewSet):
     queryset = StartupServiceProduct.objects.select_related("startup").all()
     serializer_class = StartupServiceProductSerializer
 
-    # Use object-level founder/member permission so owners can modify (200),
-    # and non-owners get 403 instead of 404
+
+
     permission_classes = [IsAuthenticated, IsFounderOrMember]
 
     def get_queryset(self):
@@ -67,7 +67,7 @@ class StartupServiceProductViewSet(viewsets.ModelViewSet):
             return qs
         role = getattr(user, "role", "")
         if role == "founder":
-            # Allow visibility; object-level permission controls writes
+
             return qs
         if role == "reviewer":
             return qs

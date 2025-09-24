@@ -60,7 +60,7 @@ def run_tests(test_type=None, verbose=False, coverage=False):
     if coverage:
         cmd.extend(['--cov=apps.company', '--cov-report=html', '--cov-report=term'])
     
-    # Add pytest options
+
     cmd.extend([
         '--tb=short',
         '--strict-markers',
@@ -70,7 +70,7 @@ def run_tests(test_type=None, verbose=False, coverage=False):
     print(f"Running command: {' '.join(cmd)}")
     print("-" * 50)
     
-    # Run the tests
+
     result = subprocess.run(cmd, cwd=project_root)
     return result.returncode
 
@@ -111,7 +111,7 @@ def main():
     
     args = parser.parse_args()
     
-    # Determine test type
+
     test_type = None
     if args.models:
         test_type = 'models'
@@ -122,7 +122,7 @@ def main():
     elif args.permissions:
         test_type = 'permissions'
     
-    # Run tests
+
     exit_code = run_tests(
         test_type=test_type,
         verbose=args.verbose,

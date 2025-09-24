@@ -45,7 +45,7 @@ class StartupDevelopmentStageSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Normalize UUIDs to strings for stable test expectations
+
         data['id'] = str(instance.id)
         data['startup'] = str(instance.startup_id) if getattr(instance, 'startup_id', None) else data.get('startup')
         data['stage'] = str(instance.stage_id) if getattr(instance, 'stage_id', None) else data.get('stage')
@@ -53,7 +53,7 @@ class StartupDevelopmentStageSerializer(serializers.ModelSerializer):
 
 
 class StartupServiceProductSerializer(serializers.ModelSerializer):
-    # When used nested under StartupProfile create/update, startup is provided by parent
+
     startup = serializers.PrimaryKeyRelatedField(
         queryset=StartupProfile.objects.all(),
         help_text="ID of the startup this service/product belongs to",
@@ -130,12 +130,12 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
         markets_data = validated_data.pop('targeted_markets', [])
         services_products_data = validated_data.pop('services_and_products', [])
         
-        # Ensure creator is owner/primary founder
+
         if 'primary_founder' not in validated_data:
             user = self.context['request'].user
             validated_data['primary_founder'] = user
 
-        # Normalize empty strings to None for optional fields
+
         optional_fields = [
             'website_link', 'linkedin_url', 'twitter_url', 'facebook_url',
             'instagram_url', 'youtube_url', 'pitch_deck_link', 'logo',
@@ -148,15 +148,15 @@ class StartupProfileCreateSerializer(serializers.ModelSerializer):
         
         startup_profile = StartupProfile.objects.create(**validated_data)
         
-        # Create company members
+
         for member in members_data:
             CompanyMember.objects.create(startup=startup_profile, **member)
         
-        # Create targeted markets
+
         for market in markets_data:
             TargetedMarket.objects.create(startup=startup_profile, **market)
 
-        # Create services/products
+
         for item in services_products_data:
             StartupServiceProduct.objects.create(startup=startup_profile, **item)
         
@@ -186,28 +186,28 @@ class StartupProfileUpdateSerializer(serializers.ModelSerializer):
         markets_data = validated_data.pop('targeted_markets', None)
         services_products_data = validated_data.pop('services_and_products', None)
         
-        # Update basic fields
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         
-        # Update members if provided
+
         if members_data is not None:
-            # Delete existing members
+
             instance.members.all().delete()
-            # Create new ones
+
             for member in members_data:
                 CompanyMember.objects.create(startup=instance, **member)
         
-        # Update targeted markets if provided
+
         if markets_data is not None:
-            # Delete existing markets
+
             instance.targeted_markets.all().delete()
-            # Create new ones
+
             for market in markets_data:
                 TargetedMarket.objects.create(startup=instance, **market)
 
-        # Update services/products if provided
+
         if services_products_data is not None:
             instance.services_and_products.all().delete()
             for item in services_products_data:

@@ -619,7 +619,7 @@ class TestStartupDevelopmentStageViewSet(APITestCase):
     def test_create_startup_stage_authenticated(self):
         """Test creating a startup development stage when authenticated."""
         self.client.force_authenticate(user=self.user)
-        # Create a startup without an existing development stage
+
         new_startup = StartupProfile.objects.create(
             startup_name="Another Startup",
             startup_industry="Technology",

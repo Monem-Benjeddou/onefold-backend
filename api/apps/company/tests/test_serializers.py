@@ -286,9 +286,9 @@ class TestDevelopmentStageSerializer:
     def test_development_stage_validation_errors(self):
         """Test development stage validation errors."""
         data = {
-            'name': '',  # Empty name should fail
+            'name': '',
             'description': 'Test description',
-            'order': 'invalid'  # Invalid order
+            'order': 'invalid'
         }
 
         serializer = DevelopmentStageSerializer(data=data)
@@ -309,7 +309,7 @@ class TestStartupDevelopmentStageSerializer:
         assert data['id'] == str(startup_development_stage.id)
         assert data['stage'] == str(startup_development_stage.stage.id)
         assert data['stage_name'] == startup_development_stage.stage.name
-        # Serializer returns ISO 8601 string, model is datetime; compare ISO
+
         assert data['assigned_date'] == startup_development_stage.assigned_date.isoformat().replace('+00:00', 'Z')
         assert data['notes'] == startup_development_stage.notes
 
@@ -328,15 +328,15 @@ class TestStartupDevelopmentStageSerializer:
         startup_stage = serializer.save()
 
         assert startup_stage.stage == development_stage
-        assert startup_stage.assigned_date is not None  # auto_now_add=True sets current date
+        assert startup_stage.assigned_date is not None
         assert startup_stage.notes == 'New notes'
 
     @pytest.mark.django_db
     def test_startup_development_stage_read_only_fields(self, startup_development_stage):
         """Test that read-only fields are not writable."""
         data = {
-            'id': 'new-id',  # Should be ignored
-            'stage_name': 'New Stage Name',  # Should be ignored
+            'id': 'new-id',
+            'stage_name': 'New Stage Name',
             'notes': 'Updated notes'
         }
 
@@ -344,7 +344,7 @@ class TestStartupDevelopmentStageSerializer:
         assert serializer.is_valid()
         updated_stage = serializer.save()
 
-        # Read-only fields should not be changed
+
         assert updated_stage.id == startup_development_stage.id
         assert updated_stage.stage.name == startup_development_stage.stage.name
         assert updated_stage.notes == 'Updated notes'
@@ -363,7 +363,7 @@ class TestTargetedMarketSerializer:
         assert data['startup'] == str(targeted_market.startup.id)
         assert data['market_name'] == targeted_market.market_name
         assert data['description'] == targeted_market.description
-        # Serializer renders decimals with two fractional digits
+
         assert data['market_size'] == f"{targeted_market.market_size:.2f}"
         assert data['market_share'] == f"{targeted_market.market_share:.2f}"
 
@@ -394,19 +394,19 @@ class TestTargetedMarketSerializer:
     def test_targeted_market_validation_errors(self):
         """Test targeted market validation errors."""
         data = {
-            'startup': 'invalid-uuid',  # Invalid UUID
-            'market_name': '',  # Empty name
-            'market_size': 'invalid',  # Invalid number
-            'market_share': 'invalid'  # Invalid decimal
+            'startup': 'invalid-uuid',
+            'market_name': '',
+            'market_size': 'invalid',
+            'market_share': 'invalid'
         }
 
         serializer = TargetedMarketSerializer(data=data)
         assert not serializer.is_valid()
         
-        # Check that we have validation errors
+
         assert len(serializer.errors) > 0
         
-        # Print errors for debugging
+
         print(f"Validation errors: {serializer.errors}")
         
         # Check that at least one field has validation errors

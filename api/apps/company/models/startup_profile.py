@@ -50,7 +50,7 @@ class StartupProfile(AbstractAutoIncrementModel):
     )
     
     
-    # Social Media Links
+
     linkedin_url = models.URLField(
         blank=True,
         null=True,
@@ -81,7 +81,7 @@ class StartupProfile(AbstractAutoIncrementModel):
         help_text=_("Company YouTube channel URL")
     )
     
-    # Media and Documents
+
     logo = models.ImageField(
         upload_to=startup_logo_path,
         null=True,
@@ -102,7 +102,7 @@ class StartupProfile(AbstractAutoIncrementModel):
         help_text=_("Pitch deck file upload")
     )
     
-    # Status and Verification
+
     is_verified = models.BooleanField(
         default=False,
         help_text=_("Whether this startup profile is verified")
