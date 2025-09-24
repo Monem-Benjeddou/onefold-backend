@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
 from .factories import (
-    # Basic factories
+    
     UserFactory,
     AdminUserFactory,
     ModeratorUserFactory,
@@ -23,17 +23,17 @@ from .factories import (
     IssuerUserFactory,
     InfluencerUserFactory,
     
-    # Company-specific factories
+    
     FounderUserFactory,
     ReviewerUserFactory,
     EmployeeUserFactory,
     
-    # Additional role factories
+    
     ManufacturerUserFactory,
     CollectorUserFactory,
     DoctorUserFactory,
     
-    # Special state factories
+    
     BannedUserFactory,
     DeactivatedUserFactory,
     UnverifiedUserFactory,
@@ -42,10 +42,10 @@ from .factories import (
     UserWithCountryFactory,
     UserWithProfileFactory,
     
-    # Comprehensive factory
+    
     AnyUserFactory,
     
-    # Convenience functions
+    
     create_admin_user,
     create_founder_user,
     create_reviewer_user,
@@ -179,28 +179,28 @@ class TestUserFactories(TestCase):
 
     def test_convenience_functions(self):
         """Test convenience functions."""
-        # Test create_admin_user
+        
         admin = create_admin_user()
         self.assertEqual(admin.role, "admin")
         self.assertTrue(admin.is_staff)
 
-        # Test create_founder_user
+        
         founder = create_founder_user()
         self.assertEqual(founder.role, "founder")
 
-        # Test create_reviewer_user
+        
         reviewer = create_reviewer_user()
         self.assertEqual(reviewer.role, "reviewer")
 
-        # Test create_regular_user
+        
         regular = create_regular_user()
         self.assertEqual(regular.role, "user")
 
-        # Test create_banned_user
+        
         banned = create_banned_user()
         self.assertTrue(banned.is_banned)
 
-        # Test create_superuser
+        
         superuser = create_superuser()
         self.assertTrue(superuser.is_superuser)
         self.assertTrue(superuser.is_staff)
@@ -271,7 +271,7 @@ class TestUserFactoryIntegration(TestCase):
         """Test user factory integration with country model."""
         from apps.countries.models import Country
         
-        # Create a country first
+        
         country = Country.objects.create(
             name="Test Country",
             iso2="TC",
@@ -279,17 +279,17 @@ class TestUserFactoryIntegration(TestCase):
             numeric="999"
         )
         
-        # Create user with that country
+        
         user = AnyUserFactory(country=country)
         self.assertEqual(user.country, country)
 
     def test_user_factory_with_groups(self):
         """Test user factory integration with Django groups."""
-        # Create groups first
+        
         admin_group = Group.objects.create(name="Admin")
         moderator_group = Group.objects.create(name="Moderator")
         
-        # Create user with groups
+        
         user = AnyUserFactory(groups=["Admin", "Moderator"])
         
         self.assertEqual(user.groups.count(), 2)
@@ -301,7 +301,7 @@ class TestUserFactoryIntegration(TestCase):
         user1 = AnyUserFactory(fullname="John Doe")
         user2 = AnyUserFactory(fullname="Jane Smith")
         
-        # Usernames should be generated and unique
+        
         self.assertIsNotNone(user1.username)
         self.assertIsNotNone(user2.username)
         self.assertNotEqual(user1.username, user2.username)
@@ -311,11 +311,11 @@ class TestUserFactoryIntegration(TestCase):
         users = AnyUserFactory.create_batch(10)
         emails = [user.email for user in users]
         
-        # All emails should be unique
+        
         self.assertEqual(len(emails), len(set(emails)))
 
 
-# Pytest fixtures for easy use in pytest tests
+
 @pytest.fixture
 def admin_user():
     """Pytest fixture for admin user."""
@@ -364,7 +364,7 @@ def users_by_role():
     return {role: AnyUserFactory(role=role) for role in roles}
 
 
-# Example usage in pytest tests
+
 def test_example_pytest_usage(admin_user, founder_user):
     """Example of using pytest fixtures."""
     assert admin_user.role == "admin"
