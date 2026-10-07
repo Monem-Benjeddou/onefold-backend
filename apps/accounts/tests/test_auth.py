@@ -141,3 +141,9 @@ def test_health(client):
     response = client.get("/health/")
     assert response.status_code == 200
     assert response.json()["checks"]["database"] == "ok"
+
+
+def test_root_points_to_the_docs(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json()["docs"] == "http://testserver/api/docs/"

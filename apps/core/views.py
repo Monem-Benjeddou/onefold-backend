@@ -24,3 +24,16 @@ def health(request):
         {"status": "ok" if healthy else "degraded", "checks": checks},
         status=200 if healthy else 503,
     )
+
+
+def index(request):
+    """Root of the API: where to go next."""
+    return JsonResponse(
+        {
+            "name": "Onefold API",
+            "version": settings.SPECTACULAR_SETTINGS["VERSION"],
+            "docs": request.build_absolute_uri("/api/docs/"),
+            "schema": request.build_absolute_uri("/api/schema/"),
+            "health": request.build_absolute_uri("/health/"),
+        }
+    )
