@@ -18,13 +18,25 @@ docker compose up --build
 - **App: http://localhost:3000**
 - API: http://localhost:8000 · API docs: http://localhost:8000/api/docs/ · Health: /health/
 
-The `api` container migrates the database and loads the learning content on
-start. While `DEBUG=1`, sign-in emails (with the link) print in its logs:
+On start, the `api` container migrates the database, loads the learning content
+and seeds demo data. Get the sign-in links:
 
 ```bash
-docker compose logs -f api      # look for http://localhost:3000/auth/verify?token=...
-docker compose exec api python manage.py createsuperuser   # for /admin/
+docker compose logs api | grep -A 14 "Demo data ready"
 ```
+
+| Account | Stage |
+|---------|-------|
+| `new@onefold.local` | Signed up, goes through onboarding |
+| `ada@onefold.local` | Just started (station 1) |
+| `grace@onefold.local` | At Deploy, with a failed check |
+| `linus@onefold.local` | Shipped: live URL and the "It's live." screen |
+| `admin@onefold.local` | Django admin at http://localhost:8000/admin/ (password `SEED_ADMIN_PASSWORD`, default `onefold`) |
+
+Links are single use and last 24 hours; restart the `api` container
+(`docker compose restart api`) or run `docker compose exec api python manage.py seed`
+for fresh ones. `seed --reset` rebuilds the demo accounts from scratch. Real sign-ins
+also work: while `DEBUG=1` the email (with the link) prints in `docker compose logs api`.
 
 ### Web app without Docker
 

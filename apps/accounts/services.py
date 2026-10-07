@@ -32,6 +32,18 @@ def _hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def issue_link(email, ttl_minutes=None):
+    """Store a new single-use token for `email` and return its sign-in URL."""
+    token = secrets.token_urlsafe(32)
+    MagicLink.objects.create(
+        email=email.strip().lower(),
+        token_hash=_hash(token),
+        expires_at=timezone.now()
+        + timedelta(minutes=ttl_minutes or settings.MAGIC_LINK_TTL_MINUTES),
+    )
+    return f"{settings.FRONTEND_URL}/auth/verify?{urlencode({'token': token})}"
+
+
 def request_link(email):
     """Email a sign-in link. Returns False when throttled (caller still answers 202)."""
     email = email.strip().lower()
@@ -39,13 +51,7 @@ def request_link(email):
     if MagicLink.objects.filter(email=email, created__gte=cooldown).exists():
         return False
 
-    token = secrets.token_urlsafe(32)
-    MagicLink.objects.create(
-        email=email,
-        token_hash=_hash(token),
-        expires_at=timezone.now() + timedelta(minutes=settings.MAGIC_LINK_TTL_MINUTES),
-    )
-    link = f"{settings.FRONTEND_URL}/auth/verify?{urlencode({'token': token})}"
+    link = issue_link(email)
     minutes = settings.MAGIC_LINK_TTL_MINUTES
     send_mail(
         subject="Your Onefold sign-in link",

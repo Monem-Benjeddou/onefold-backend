@@ -7,6 +7,9 @@ x-app: &app
   environment:
     POSTGRES_HOST: db
     REDIS_URL: redis://redis:6379/0
+    # The web container calls the API as http://api:8000, so Django must
+    # accept the "api" host too (otherwise every call is a 400 DisallowedHost).
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1},api
   volumes:
     - .:/app
   depends_on:
@@ -44,9 +47,11 @@ services:
 
   api:
     <<: *app
+    # Migrate, load content, seed demo accounts (unless SEED_DEMO_DATA=0), serve.
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py sync_content --publish &&
+             if [ \"$${SEED_DEMO_DATA:-1}\" != \"0\" ]; then python manage.py seed || echo 'Seeding failed; continuing.'; fi &&
              python manage.py runserver 0.0.0.0:8000"
     ports:
       - "${API_PORT:-8000}:8000"
