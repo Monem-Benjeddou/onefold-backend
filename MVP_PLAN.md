@@ -12,7 +12,7 @@
 - **What we deliberately don't build:** no in-browser IDE, no hosting, no video platform, no community, no certificates, no course-authoring UI. Each one is a company on its own; none of them tests the bet.
 - **North-star metric:** *Products shipped*, meaning learners who reach "It's live" with a verified public URL.
 - **Shape:** about 12 weeks with 1 full-stack/backend engineer, 1 frontend engineer, 1 product designer (part-time) and 1 content author. **Content is the long pole, so it starts in week 1, not week 8.**
-- **Backend:** built on this repo (Django + DRF + Postgres + Redis + Celery), after a week-0 cleanup (section 9.1: CI is currently broken and the beat schedule references apps that don't exist).
+- **Backend:** a standalone Django + DRF + Postgres + Redis + Celery app (this repo), with no code inherited from earlier products. Section 9.1 has the status.
 
 ---
 
@@ -227,7 +227,7 @@ Dashboard → Continue → Step (read, build in their own tools) → "Check my w
                       │ REST (OpenAPI-typed client) + SSE/WebSocket
             ┌─────────▼────────────┐       ┌───────────────┐
             │ API (Django + DRF)   │──────▶│ Postgres      │
-            │ this repo            │       └───────────────┘
+            │ onefold-backend      │       └───────────────┘
             └──┬────────┬──────────┘       ┌───────────────┐
                │        └─────────────────▶│ Redis         │ cache, Celery broker, Channels
                │                           └───────────────┘
@@ -243,7 +243,7 @@ Dashboard → Continue → Step (read, build in their own tools) → "Check my w
 ### 6.2 Key decisions
 | Decision | Choice | Why | Trade-off |
 |----------|--------|-----|-----------|
-| Backend | **This Django/DRF repo** | Auth, files, notifications, privacy, Celery and Channels already exist | Must clean out the inherited domain apps first (9.1) |
+| Backend | **Standalone Django 5.2 + DRF app** | Mature, batteries included (admin, auth, ORM, migrations); fast to build CRUD-heavy product APIs | Python async story is weaker; Celery covers the background work |
 | Frontend | Next.js (App Router) + TypeScript + Tailwind + Radix primitives | SSR for public/SEO pages, mature ecosystem, accessible primitives | Two deployables |
 | API contract | drf-spectacular → generated TS client | One source of truth, no hand-written types | Codegen step in CI |
 | Auth | GitHub OAuth + email magic link; JWT in an **httpOnly cookie** (simplejwt is already installed) | Fewer passwords; GitHub needed anyway | Must handle email-less GitHub accounts |
@@ -256,7 +256,7 @@ Dashboard → Continue → Step (read, build in their own tools) → "Check my w
 
 ### 6.3 New Django apps
 ```
-api/apps/
+apps/
   learning/       Path, Station, Step, PathVersion, Enrollment, StepProgress
   projects/       Project, ProjectNote, Task (derived from steps)
   verification/   CheckRun, check executors (github, http, ci, file, attest)
@@ -379,24 +379,23 @@ Conventions: cursor pagination, RFC 7807 problem+json errors carrying a `request
 
 ## 9. Delivery plan
 
-### 9.1 Week 0: foundations in this repo (do first)
-These are issues found while reviewing the repo. Checked items are done (see the "Week 0 progress" note below).
-- [x] **CI is broken:** `.github/workflows/ci.yml` runs `cd noev-backend`, but the repo root *is* the project. Fix the paths and add a pytest job.
-- [x] **Celery beat references missing apps:** `api/config/settings/components/cron.py` schedules tasks in `apps.stats`, `apps.video_ai`, `apps.payment`, `apps.stats_ext`, and points at a scheduler class that doesn't exist. Remove them so beat can start. *(Logger entries for `apps.cards` / `apps.payment` remain; harmless, clean up with the inherited apps.)*
-- [ ] **Inherited domain apps** (`company`, `competitor`, `funding`, `revenue`, `stakeholder`, `accounts.founder`) belong to another product. Decision needed: remove them (recommended), or disable their URLs and keep them out of the OpenAPI schema.
-- [ ] **Version drift:** README says Django 5, `requirements.txt` pins `django<5.0`. Pick one (recommend Django 5.x LTS-track) and pin Python.
-- [x] **Repo hygiene:** `README copy.md`, `*.bak` scripts and a committed `api/celerybeat-schedule` file should be removed and ignored.
-- [x] Add `.env.example` documenting every variable the settings read.
-- [ ] Add `ruff` + `mypy` (or pyright) + pre-commit; set up Sentry; add a `/health` check covering DB, Redis and Celery.
+### 9.1 Week 0: foundations (status)
+The backend started on an older repo (neov/kolct) and was rebuilt as a standalone app, keeping only the Onefold code.
+
+**Done**
+- [x] Standalone Django 5.2 project: env-driven settings, PostgreSQL (SQLite fallback for quick local runs), Redis cache, Celery.
+- [x] `docker compose up --build` runs Postgres, Redis, the API and a Celery worker; the API migrates and loads content on start.
+- [x] `.env.example`, `.dockerignore`, ruff lint + format, CI (lint, migration check, content check, tests on PostgreSQL, image build).
+- [x] Auth: passwordless magic-link sign-in, JWT with refresh rotation and logout (revocation), `/me` with self-serve account deletion.
+- [x] `learning`, `projects`, `verification` apps (M1–M3 backend scope, minus GitHub checks and the AI reviewer).
+- [x] `/health/` reports database and cache status.
+- [x] 110 tests passing on SQLite and PostgreSQL; full flow verified end to end with Postgres, Redis, gunicorn and a Celery worker.
+
+**Next**
+- [ ] GitHub sign-in (OAuth) and the GitHub App for repo / CI checks.
+- [ ] Onboarding endpoints (the 3 questions + project choice).
+- [ ] Sentry, production deployment target, transactional email provider.
 - [ ] Frontend repo scaffold with the token package from the brand book, plus Storybook.
-
-**Week 0 progress (done):**
-- CI now runs the new apps' tests on Python 3.11 and builds the backend image (`docker/backend/Dockerfile`, production target; the image build was not run locally because no Docker daemon was available).
-- Beat schedule keeps only the 5 `core.tasks.cache_maintenance` tasks that exist; scheduler points at `django_celery_beat`. A test now fails if the schedule references missing code.
-- Removed `README copy.md`, `*.bak` files and the tracked `api/celerybeat-schedule`; `pytest.ini` puts `api/` on the path; tests set `DEBUG=0`.
-- Started M1–M3 backend: `learning` (content-as-code paths, enrollment, linear progress), `projects`, `verification` (`attest` and SSRF-guarded `http.get` checks, async via Celery, idempotency keys, rate limit). 99 tests.
-
-**Still open:** the inherited suite (about 400 failing or erroring tests in auth, files, notifications, countries and others) predates this work. Fix it or remove those apps (decision 2 in section 11). The ruff/mypy and Sentry items are not done yet.
 
 ### 9.2 Milestones (2-week sprints)
 | Wk | Milestone | Engineering | Design | Content | Exit criteria |
@@ -439,7 +438,7 @@ Acceptance criteria met · tests (unit + e2e where relevant) · every state in t
 
 ## 11. Open decisions for the founder
 1. **Price point and paywall position** (after Station 3 is recommended).
-2. **Remove the inherited domain apps from this repo?** (recommended: yes)
+2. ~~Remove the inherited domain apps?~~ Done: the backend is now standalone.
 3. **Which two hosting providers** do the Deploy guides support?
 4. **Starter projects:** confirm the 3 (Habit Loop, Waitlist SaaS, Link-in-bio).
 5. **Beta cohort source:** waitlist, a community partner or paid acquisition?

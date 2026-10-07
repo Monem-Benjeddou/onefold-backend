@@ -1,55 +1,82 @@
-# Noev Backend Starter
+# Onefold backend
 
-Minimal Django + DRF starter extracted from kolct-api, with environment-based settings, OpenAPI docs, and Docker support.
+The API for Onefold: a platform that teaches people to ship complete products,
+from idea to production. Builders follow a path of stations (Idea → Product →
+UX/UI → System → Build → Test → Deploy → Run → Iterate), build their own project
+with their own tools, and Onefold verifies each step.
 
-## Quickstart
+Django 5.2 · Django REST Framework · PostgreSQL 16 · Redis · Celery
 
-1. Create environment file
+## Run it
 
-```
-# If .env.example is not present, copy and adjust from this section in README
-# or create one manually with the variables used in config/settings.py
-```
-
-2. Install dependencies and run migrations
-
-```
-python -m venv .venv && .venv/Scripts/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
-
-Open http://localhost:8000/api/docs/
-
-## Docker
-
-```
-cp .env.example .env      # then set SECRET_KEY and DATABASE_PASSWORD
+```bash
+cp .env.example .env        # set SECRET_KEY and POSTGRES_PASSWORD
 docker compose up --build
 ```
 
-The API is on http://localhost:8009 (`API_PORT`). The root `docker-compose.yml`
-includes `docker/docker-compose.yml`; `make up` runs the same stack.
+- API: http://localhost:8000
+- API docs (Swagger): http://localhost:8000/api/docs/
+- Health: http://localhost:8000/health/
 
-Load the learning content once the stack is up:
+The `web` container migrates the database and loads the learning content on
+start. Sign-in links print in its logs while `DEBUG=1`:
+
+```bash
+docker compose logs -f web      # look for /auth/verify?token=...
+docker compose exec web python manage.py createsuperuser   # for /admin/
+```
+
+### Without Docker
+
+```bash
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+export DEBUG=1              # no POSTGRES_DB → SQLite, no REDIS_URL → in-memory cache
+python manage.py migrate
+python manage.py sync_content --publish
+python manage.py runserver
+```
+
+Checks run on Celery, so "Check my work" needs Redis and
+`celery -A config worker -l info`, or `CELERY_TASK_ALWAYS_EAGER=1` to run them inline.
+
+## Test and lint
+
+```bash
+pytest                       # SQLite, no services needed
+TEST_USE_SQLITE=0 pytest     # against the Postgres in POSTGRES_*
+ruff check . && ruff format --check .
+```
+
+## How it's organised
 
 ```
-docker compose exec nevo-backend python manage.py migrate
-docker compose exec nevo-backend python manage.py sync_content --publish
+config/            settings (all env-driven), urls, celery
+apps/
+  core/            base model (UUID + timestamps), /health/
+  accounts/        email users, passwordless magic-link sign-in, JWT
+  learning/        paths, stations, steps, enrollment, progress
+  projects/        the builder's product: repo, live URL, ownership token
+  verification/    "Check my work": check runs, executors, SSRF-safe HTTP
+content/           learning paths as Markdown + YAML (see content/README.md)
+MVP_PLAN.md        product, UX and engineering plan for the MVP
 ```
 
-## Features
+## API at a glance
 
-- Django 5, DRF, CORS, Spectacular (OpenAPI)
-- Health endpoint at /health/
-- API root at /api/
-- Swagger UI at /api/docs/
-- Env-driven settings with SQLite default, Postgres optional
-- Nginx, Gunicorn, Redis, Postgres compose
+| Method | Path | What it does |
+|--------|------|--------------|
+| POST | `/api/v1/auth/magic-link/` | Email a sign-in link (always 202) |
+| POST | `/api/v1/auth/magic-link/verify/` | Exchange the link's token for JWTs |
+| POST | `/api/v1/auth/token/refresh/` | Rotate tokens |
+| POST | `/api/v1/auth/logout/` | Revoke a refresh token |
+| GET/PATCH/DELETE | `/api/v1/auth/me/` | The signed-in builder |
+| GET | `/api/v1/learning/paths/current/` | Path outline |
+| GET/POST | `/api/v1/learning/enrollment/` | Progress / enroll |
+| GET/PATCH | `/api/v1/learning/enrollment/steps/{slug}/` | Step content, save position |
+| POST | `/api/v1/learning/enrollment/steps/{slug}/start/` `…/complete/` | Move through steps |
+| GET/POST | `/api/v1/projects/` | The builder's projects |
+| GET/POST | `/api/v1/projects/{id}/checks/` | Check history / "Check my work" |
+| GET | `/api/v1/checks/{id}/` | Poll one check |
 
-## Project layout
-
-- config: settings, urls, wsgi/asgi
-- noev: example app with root endpoint
-- docker: nginx/postgres/redis configs
+Send `Authorization: Bearer <access>` on everything except sign-in.

@@ -30,8 +30,8 @@ check:                # required for check and ship steps
 Validate, then sync:
 
 ```
-python api/manage.py sync_content --check
-python api/manage.py sync_content --publish
+python manage.py sync_content --check
+python manage.py sync_content --publish
 ```
 
 The `ship-your-first-product` path is a **draft skeleton** (one or two steps per station)

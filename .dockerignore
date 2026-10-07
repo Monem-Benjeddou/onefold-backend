@@ -1,4 +1,4 @@
-# Keep secrets, VCS data and local artifacts out of images (Dockerfile does COPY . /app).
+# Keep secrets, VCS data and local artifacts out of the image.
 .git
 .github
 .env
@@ -9,11 +9,7 @@
 .venv
 venv
 .pytest_cache
-.mypy_cache
 .ruff_cache
-node_modules
-*.sqlite3
-api/media
-api/staticfiles
-api/logs
-api/celerybeat-schedule*
+db.sqlite3
+staticfiles
+media

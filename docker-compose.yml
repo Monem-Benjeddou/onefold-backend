@@ -1,8 +1,59 @@
-# Local development stack: `docker compose up --build` from the repo root.
-#
-# The services are defined once, in docker/docker-compose.yml (also used by
-# `make up`). Paths inside it are relative to docker/, so they resolve to this
-# repo. Variables come from .env at the repo root (copy .env.example).
-include:
-  - path: docker/docker-compose.yml
-    env_file: .env
+# Local development: `cp .env.example .env && docker compose up --build`
+# API: http://localhost:8000  ·  Docs: http://localhost:8000/api/docs/
+
+x-app: &app
+  build: .
+  env_file: .env
+  environment:
+    POSTGRES_HOST: db
+    REDIS_URL: redis://redis:6379/0
+  volumes:
+    - .:/app
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-onefold}
+      POSTGRES_USER: ${POSTGRES_USER:-onefold}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT_HOST:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT_HOST:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  web:
+    <<: *app
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py sync_content --publish &&
+             python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  worker:
+    <<: *app
+    command: celery -A config worker --loglevel=info --concurrency=2
+
+volumes:
+  postgres_data:
