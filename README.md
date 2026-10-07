@@ -25,7 +25,18 @@ Open http://localhost:8000/api/docs/
 ## Docker
 
 ```
+cp .env.example .env      # then set SECRET_KEY and DATABASE_PASSWORD
 docker compose up --build
+```
+
+The API is on http://localhost:8009 (`API_PORT`). The root `docker-compose.yml`
+includes `docker/docker-compose.yml`; `make up` runs the same stack.
+
+Load the learning content once the stack is up:
+
+```
+docker compose exec nevo-backend python manage.py migrate
+docker compose exec nevo-backend python manage.py sync_content --publish
 ```
 
 ## Features
