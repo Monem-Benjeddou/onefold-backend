@@ -115,6 +115,16 @@ class EnrollRequestSerializer(serializers.Serializer):
     pace = serializers.ChoiceField(choices=Enrollment.Pace.choices, required=False, default="")
 
 
+class CheckSummarySerializer(serializers.Serializer):
+    """What "Check my work" will do, shown before it runs."""
+
+    kind = serializers.CharField()
+    statement = serializers.CharField(required=False, help_text="attest: what the builder confirms")
+    url = serializers.CharField(required=False, help_text="http.get: the URL template we call")
+    expect_status = serializers.IntegerField(required=False)
+    expect_body_contains = serializers.CharField(required=False)
+
+
 class StepDetailSerializer(serializers.ModelSerializer):
     """A step as the builder sees it, with their progress attached."""
 
@@ -126,6 +136,7 @@ class StepDetailSerializer(serializers.ModelSerializer):
     body_md = serializers.CharField(source="step.body_md", read_only=True)
     has_check = serializers.BooleanField(source="step.has_check", read_only=True)
     station = serializers.SerializerMethodField()
+    check = serializers.SerializerMethodField()
 
     class Meta:
         model = StepProgress
@@ -138,6 +149,7 @@ class StepDetailSerializer(serializers.ModelSerializer):
             "has_check",
             "body_md",
             "station",
+            "check",
             "status",
             "started_at",
             "completed_at",
@@ -148,3 +160,19 @@ class StepDetailSerializer(serializers.ModelSerializer):
     @extend_schema_field(StationRefSerializer)
     def get_station(self, obj):
         return StationRefSerializer(obj.step.station).data
+
+    @extend_schema_field(CheckSummarySerializer(allow_null=True))
+    def get_check(self, obj):
+        spec = obj.step.check_spec
+        if not spec:
+            return None
+        summary = {"kind": spec["kind"]}
+        if "statement" in spec:
+            summary["statement"] = spec["statement"]
+        if "url" in spec:
+            summary["url"] = spec["url"]
+            expect = spec.get("expect", {})
+            summary["expect_status"] = expect.get("status", 200)
+            if expect.get("body_contains"):
+                summary["expect_body_contains"] = expect["body_contains"]
+        return summary

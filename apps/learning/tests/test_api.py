@@ -70,6 +70,19 @@ def test_step_flow(client):
     assert detail.status_code == 200
     assert detail.json()["body_md"] == "Do it.\n"
     assert detail.json()["station"]["order"] == 1
+    assert detail.json()["check"] is None
+
+    gate = client.get(f"{BASE}/enrollment/steps/go-live/").json()["check"]
+    assert gate == {
+        "kind": "http.get",
+        "url": "{project.live_url}/health",
+        "expect_status": 200,
+        "expect_body_contains": "{project.ownership_token}",
+    }
+    assert client.get(f"{BASE}/enrollment/steps/scope-cut/").json()["check"] == {
+        "kind": "attest",
+        "statement": "I did the thing.",
+    }
 
     started = client.post(f"{BASE}/enrollment/steps/problem/start/")
     assert started.json()["status"] == "in_progress"

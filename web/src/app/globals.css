@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+/* Onefold brand tokens (Brand Guidelines 1.0). */
+@theme {
+  --color-orange: #ff4f00;
+  --color-orange-dark: #c43d00;
+  --color-orange-light: #ffd9c7;
+
+  --color-ink: #15120f;
+  --color-carbon: #12100d;
+  --color-carbon-2: #1c1915;
+  --color-carbon-3: #26221d;
+  --color-carbon-line: #3a342c;
+  --color-carbon-muted: #a79f92;
+
+  --color-paper: #f3efe7;
+  --color-surface: #fbf9f4;
+  --color-elevated: #fffdf9;
+  --color-line: #dcd5c8;
+  --color-muted: #6a6358;
+  --color-body: #3a342c;
+
+  --color-patina: #1f5a50;
+  --color-patina-light: #cfe3dc;
+  --color-brass: #e7b547;
+
+  --color-success: #177a4c;
+  --color-warning: #8c5c00;
+  --color-error: #c8283f;
+  --color-info: #2f6db0;
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --shadow-hard: 6px 6px 0 0 var(--color-ink);
+  --shadow-hard-sm: 4px 4px 0 0 var(--color-ink);
+  --shadow-hard-orange: 6px 6px 0 0 var(--color-orange);
+  --shadow-hard-paper: 6px 6px 0 0 var(--color-paper);
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    font-family: var(--font-sans);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-orange);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-orange-light);
+    color: var(--color-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Reveal: content settles into place, moving forward (down-right), no bounce. */
+@keyframes fold-in {
+  from {
+    transform: translate(-10px, -10px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Step content (Markdown) */
+.prose-onefold {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--color-body);
+  max-width: 68ch;
+}
+.prose-onefold > * + * {
+  margin-top: 1em;
+}
+.prose-onefold h1,
+.prose-onefold h2,
+.prose-onefold h3 {
+  font-family: var(--font-display);
+  color: var(--color-ink);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 1.6em;
+}
+.prose-onefold h2 {
+  font-size: 1.5rem;
+}
+.prose-onefold h3 {
+  font-size: 1.2rem;
+}
+.prose-onefold strong {
+  color: var(--color-ink);
+}
+.prose-onefold a {
+  color: var(--color-orange-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.prose-onefold ul,
+.prose-onefold ol {
+  padding-left: 1.4em;
+}
+.prose-onefold ul {
+  list-style: square;
+}
+.prose-onefold ol {
+  list-style: decimal;
+}
+.prose-onefold li + li {
+  margin-top: 0.35em;
+}
+.prose-onefold blockquote {
+  border-left: 4px solid var(--color-orange);
+  background: var(--color-elevated);
+  padding: 0.9em 1.1em;
+  color: var(--color-ink);
+}
+.prose-onefold code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 0.1em 0.35em;
+}
+.prose-onefold pre {
+  background: var(--color-carbon);
+  color: var(--color-patina-light);
+  padding: 1em 1.2em;
+  overflow-x: auto;
+}
+.prose-onefold pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}

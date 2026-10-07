@@ -13,3 +13,6 @@ venv
 db.sqlite3
 staticfiles
 media
+
+# The web app has its own image (web/Dockerfile)
+web

@@ -1,11 +1,12 @@
-# Onefold backend
+# Onefold
 
-The API for Onefold: a platform that teaches people to ship complete products,
+The web app and API for Onefold: a platform that teaches people to ship complete products,
 from idea to production. Builders follow a path of stations (Idea → Product →
 UX/UI → System → Build → Test → Deploy → Run → Iterate), build their own project
 with their own tools, and Onefold verifies each step.
 
-Django 5.2 · Django REST Framework · PostgreSQL 16 · Redis · Celery
+**API:** Django 5.2 · Django REST Framework · PostgreSQL 16 · Redis · Celery
+**Web:** Next.js 16 · React 19 · Tailwind CSS 4 (in `web/`)
 
 ## Run it
 
@@ -14,19 +15,30 @@ cp .env.example .env        # set SECRET_KEY and POSTGRES_PASSWORD
 docker compose up --build
 ```
 
-- API: http://localhost:8000
-- API docs (Swagger): http://localhost:8000/api/docs/
-- Health: http://localhost:8000/health/
+- **App: http://localhost:3000**
+- API: http://localhost:8000 · API docs: http://localhost:8000/api/docs/ · Health: /health/
 
-The `web` container migrates the database and loads the learning content on
-start. Sign-in links print in its logs while `DEBUG=1`:
+The `api` container migrates the database and loads the learning content on
+start. While `DEBUG=1`, sign-in emails (with the link) print in its logs:
 
 ```bash
-docker compose logs -f web      # look for /auth/verify?token=...
-docker compose exec web python manage.py createsuperuser   # for /admin/
+docker compose logs -f api      # look for http://localhost:3000/auth/verify?token=...
+docker compose exec api python manage.py createsuperuser   # for /admin/
 ```
 
-### Without Docker
+### Web app without Docker
+
+```bash
+cd web
+npm install
+BACKEND_URL=http://localhost:8000 npm run dev    # http://localhost:3000
+```
+
+The browser only talks to the web app. Tokens live in httpOnly cookies, and
+`/api/proxy/*` forwards calls to the API, so there's no CORS setup and no
+token in page scripts.
+
+### API without Docker
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
@@ -51,6 +63,8 @@ ruff check . && ruff format --check .
 ## How it's organised
 
 ```
+web/               Next.js app: landing, sign-in, onboarding, dashboard,
+                   path, steps + "Check my work", project, ship moment
 config/            settings (all env-driven), urls, celery
 apps/
   core/            base model (UUID + timestamps), /health/
