@@ -72,6 +72,9 @@ LOCAL_APPS = [
     "apps.privacy",
     "apps.revenue",
     "apps.stakeholder",
+    "apps.learning",
+    "apps.projects",
+    "apps.verification",
     "core",
 ]
 

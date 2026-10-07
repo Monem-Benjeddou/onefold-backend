@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     "apps.privacy",
     "apps.revenue",
     "apps.stakeholder",
+    "apps.learning",
+    "apps.projects",
+    "apps.verification",
 ]
 
 MIDDLEWARE = [
@@ -206,3 +209,11 @@ DATABASE_ROUTERS = []
 
 # Ensure we're using SQLite for all operations
 DATABASE_CONNECTION_POOLING = None
+
+
+
+# Onefold apps (mirrors config/settings/components/onefold.py; importing that
+# module here would execute the settings package and load development settings).
+LEARNING_CONTENT_DIR = BASE_DIR.parent / "content"
+LEARNING_DEFAULT_PATH = "ship-your-first-product"
+VERIFICATION_CHECKS_PER_MINUTE = 10

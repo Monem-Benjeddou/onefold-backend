@@ -39,6 +39,10 @@ urlpatterns = [
     path("api/v1/competitors/", include("api.apps.competitor.urls")),
     path("api/v1/revenue/", include("api.apps.revenue.urls")),
     path("api/v1/funding/", include("api.apps.funding.urls")),
+    # Onefold MVP
+    path("api/v1/learning/", include("apps.learning.urls")),
+    path("api/v1/projects/", include("apps.projects.urls")),
+    path("api/v1/checks/", include("apps.verification.urls")),
 ]
 
 

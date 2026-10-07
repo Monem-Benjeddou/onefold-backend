@@ -158,3 +158,6 @@ reviewer/cache/
 # Claude instructions (local only - files moved to .claude/)
 audios.secrets
 WARP.md
+# Celery beat local schedule state
+celerybeat-schedule
+celerybeat-schedule.*

@@ -46,6 +46,7 @@ from .components.static import *
 from .components.templates import *
 from .components.urls import *
 from .components.app_specific import *
+from .components.onefold import *
 from .components.services import *
 from .components.ckeditor import *
 from .components.third_party import *

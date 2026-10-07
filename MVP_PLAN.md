@@ -380,14 +380,23 @@ Conventions: cursor pagination, RFC 7807 problem+json errors carrying a `request
 ## 9. Delivery plan
 
 ### 9.1 Week 0: foundations in this repo (do first)
-These are issues found while reviewing the repo today:
-- [ ] **CI is broken:** `.github/workflows/ci.yml` runs `cd noev-backend`, but the repo root *is* the project. Fix the paths and add a pytest job.
-- [ ] **Celery beat references missing apps:** `api/config/settings/components/cron.py` schedules tasks in `apps.stats`, `apps.video_ai`, `apps.payment`, `apps.stats_ext`, and logging config references `apps.cards`. None exist here. Remove them so beat and the logs are clean.
+These are issues found while reviewing the repo. Checked items are done (see the "Week 0 progress" note below).
+- [x] **CI is broken:** `.github/workflows/ci.yml` runs `cd noev-backend`, but the repo root *is* the project. Fix the paths and add a pytest job.
+- [x] **Celery beat references missing apps:** `api/config/settings/components/cron.py` schedules tasks in `apps.stats`, `apps.video_ai`, `apps.payment`, `apps.stats_ext`, and points at a scheduler class that doesn't exist. Remove them so beat can start. *(Logger entries for `apps.cards` / `apps.payment` remain; harmless, clean up with the inherited apps.)*
 - [ ] **Inherited domain apps** (`company`, `competitor`, `funding`, `revenue`, `stakeholder`, `accounts.founder`) belong to another product. Decision needed: remove them (recommended), or disable their URLs and keep them out of the OpenAPI schema.
 - [ ] **Version drift:** README says Django 5, `requirements.txt` pins `django<5.0`. Pick one (recommend Django 5.x LTS-track) and pin Python.
-- [ ] **Repo hygiene:** `README copy.md`, `*.bak` scripts and a committed `api/celerybeat-schedule` file should be removed and ignored; add `.env.example`.
+- [x] **Repo hygiene:** `README copy.md`, `*.bak` scripts and a committed `api/celerybeat-schedule` file should be removed and ignored.
+- [ ] Add `.env.example` documenting every variable the settings read.
 - [ ] Add `ruff` + `mypy` (or pyright) + pre-commit; set up Sentry; add a `/health` check covering DB, Redis and Celery.
 - [ ] Frontend repo scaffold with the token package from the brand book, plus Storybook.
+
+**Week 0 progress (done):**
+- CI now runs the new apps' tests on Python 3.11 and builds the backend image (`docker/backend/Dockerfile`, production target; the image build was not run locally because no Docker daemon was available).
+- Beat schedule keeps only the 5 `core.tasks.cache_maintenance` tasks that exist; scheduler points at `django_celery_beat`. A test now fails if the schedule references missing code.
+- Removed `README copy.md`, `*.bak` files and the tracked `api/celerybeat-schedule`; `pytest.ini` puts `api/` on the path; tests set `DEBUG=0`.
+- Started M1–M3 backend: `learning` (content-as-code paths, enrollment, linear progress), `projects`, `verification` (`attest` and SSRF-guarded `http.get` checks, async via Celery, idempotency keys, rate limit). 99 tests.
+
+**Still open:** the inherited suite (about 400 failing or erroring tests in auth, files, notifications, countries and others) predates this work. Fix it or remove those apps (decision 2 in section 11). The `.env.example`, ruff/mypy and Sentry items are not done yet.
 
 ### 9.2 Milestones (2-week sprints)
 | Wk | Milestone | Engineering | Design | Content | Exit criteria |
