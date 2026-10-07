@@ -386,7 +386,7 @@ These are issues found while reviewing the repo. Checked items are done (see the
 - [ ] **Inherited domain apps** (`company`, `competitor`, `funding`, `revenue`, `stakeholder`, `accounts.founder`) belong to another product. Decision needed: remove them (recommended), or disable their URLs and keep them out of the OpenAPI schema.
 - [ ] **Version drift:** README says Django 5, `requirements.txt` pins `django<5.0`. Pick one (recommend Django 5.x LTS-track) and pin Python.
 - [x] **Repo hygiene:** `README copy.md`, `*.bak` scripts and a committed `api/celerybeat-schedule` file should be removed and ignored.
-- [ ] Add `.env.example` documenting every variable the settings read.
+- [x] Add `.env.example` documenting every variable the settings read.
 - [ ] Add `ruff` + `mypy` (or pyright) + pre-commit; set up Sentry; add a `/health` check covering DB, Redis and Celery.
 - [ ] Frontend repo scaffold with the token package from the brand book, plus Storybook.
 
@@ -396,7 +396,7 @@ These are issues found while reviewing the repo. Checked items are done (see the
 - Removed `README copy.md`, `*.bak` files and the tracked `api/celerybeat-schedule`; `pytest.ini` puts `api/` on the path; tests set `DEBUG=0`.
 - Started M1–M3 backend: `learning` (content-as-code paths, enrollment, linear progress), `projects`, `verification` (`attest` and SSRF-guarded `http.get` checks, async via Celery, idempotency keys, rate limit). 99 tests.
 
-**Still open:** the inherited suite (about 400 failing or erroring tests in auth, files, notifications, countries and others) predates this work. Fix it or remove those apps (decision 2 in section 11). The `.env.example`, ruff/mypy and Sentry items are not done yet.
+**Still open:** the inherited suite (about 400 failing or erroring tests in auth, files, notifications, countries and others) predates this work. Fix it or remove those apps (decision 2 in section 11). The ruff/mypy and Sentry items are not done yet.
 
 ### 9.2 Milestones (2-week sprints)
 | Wk | Milestone | Engineering | Design | Content | Exit criteria |
