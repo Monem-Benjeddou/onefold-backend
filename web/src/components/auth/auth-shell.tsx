@@ -22,8 +22,8 @@ export function AuthShell({
   subline?: string;
 }) {
   return (
-    <div className="min-h-dvh bg-paper lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <aside className="relative hidden overflow-hidden bg-carbon px-12 py-10 text-paper lg:flex lg:min-h-dvh lg:flex-col lg:justify-between">
+    <div className="min-h-dvh bg-paper lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+      <aside className="relative hidden overflow-hidden bg-carbon px-12 py-10 text-paper lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between">
         <Link href="/" aria-label="Onefold home" className="relative self-start">
           <Logo tone="paper" />
         </Link>
