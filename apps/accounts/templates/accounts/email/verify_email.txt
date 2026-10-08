@@ -1,0 +1,9 @@
+{% autoescape off %}
+Confirm your email for Onefold
+
+{% if user.name %}Hi {{ user.name }}, one{% else %}One{% endif %} click confirms {{ user.email }} is yours:
+
+{{ link }}
+
+The link lasts {{ hours }} hours. If you didn't sign up, ignore this email.
+{% endautoescape %}

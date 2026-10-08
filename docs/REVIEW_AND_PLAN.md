@@ -1,7 +1,75 @@
 # Onefold — State review & plan to a real MVP
 
 > Senior engineering + UX review of `main` at `f0bb00c`, measured against `MVP_PLAN.md`.
-> Date: 2026-10-08 · Rev 2: sign-in, local inbox and onboarding added as Phase 0 (top priority).
+> Date: 2026-10-08 · Rev 3: **Phase 0 and Phase 1 are done** (status in §0). Rev 2 added sign-in, local inbox and onboarding as Phase 0.
+
+---
+
+## 0. Status (Rev 3)
+
+**Done: Phase 0 (sign-in + onboarding) and Phase 1 (solid states + step page).**
+
+**Verification**
+- 162 API tests pass, and lint is clean.
+- 16 Playwright end-to-end tests pass, including the axe WCAG 2.2 AA audits, all run against the real stack with Mailpit.
+- Web typecheck and production build pass.
+- CI now runs the end-to-end suite.
+
+**Phase 0**
+- **Local inbox**
+  - Mailpit runs in docker compose, and the app links to it.
+  - Demo accounts have a password, plus a one-click "Sign in as…" panel in development.
+  - Web dependencies are baked into the dev image, with healthchecks on every service.
+  - Nobody needs the logs.
+- **Auth API**
+  - Register, login, forgot/reset/change password, email verification and resend.
+  - GitHub and Google OAuth, with state and the code exchange done server-side.
+  - Per-IP throttling and per-email lockout.
+  - Device sessions (the `sid` claim; revoke one or all).
+  - Sign-in audit log in the admin.
+  - A request ID on every error.
+- **Sessions**
+  - Cookies live exactly as long as their tokens.
+  - "Remember this device".
+  - `proxy.ts` renews expiring tokens before pages render.
+  - The browser client retries once after a refresh.
+  - A network blip never signs anyone out.
+- **Screens:** login, sign-up (strength meter), forgot and reset password, verify email, magic link. All:
+  - share one split layout;
+  - work without JavaScript for the basic form posts;
+  - show inline field errors with a focused summary.
+- **Onboarding**
+  - One atomic, idempotent `POST /onboarding/`.
+  - Drafts saved on the server.
+  - URL-addressable steps.
+  - Starter-project picker.
+  - Back and Sign out always visible.
+  - Builders stranded by the old two-call flow are sent back to onboarding.
+
+**Phase 1**
+- **One call for the shell:** `/workspace` replaces the 4–5 calls each page made, and is cached per request.
+- **Loading and error states:** skeleton `loading.tsx` per route, `error.tsx` with a retry and reference, and a step `not-found`.
+- **Step page:**
+  - Real title and breadcrumb.
+  - Previous/next links.
+  - Read-ahead for locked steps.
+  - A phone action bar above the tab bar.
+  - Copy buttons on code blocks.
+  - Polling that backs off.
+  - Optimistic "Mark as done" with rollback.
+- **Component kit:** Field, Input, Textarea, PasswordInput, Checkbox, RadioCards, Alert, Toast, Skeleton, StatusPill, Spinner-in-button, RelativeTime, CodeBlock and icons.
+- **App shell:**
+  - Mobile bottom nav and an account menu.
+  - Skip link.
+  - Check history with step titles and relative times.
+  - Email-confirmation banner.
+
+**Not done yet, by design**
+- **Settings page** (Phase 2): password change, signed-in devices, connected accounts, export and delete. The API endpoints exist; the screen doesn't.
+- **SSO tried for real:** GitHub/Google sign-in is tested with mocked provider replies. A real login needs OAuth app keys in `.env`.
+- **Dialog:** no screen needs a modal yet, so none was built.
+- **API types:** TypeScript types are still hand-written, not generated from OpenAPI (P2 #11).
+- **Two-factor and passkeys:** Should, after the beta.
 
 ---
 

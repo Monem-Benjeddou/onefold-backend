@@ -57,9 +57,11 @@ INSTALLED_APPS = [
     "apps.learning",
     "apps.projects",
     "apps.verification",
+    "apps.workspace",
 ]
 
 MIDDLEWARE = [
+    "apps.core.middleware.RequestIDMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -133,13 +135,24 @@ CELERY_TASK_TIME_LIMIT = 120
 # --- API -----------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # JWT plus a check that the token's device session hasn't been revoked.
+        "apps.accounts.authentication.SessionJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "EXCEPTION_HANDLER": "apps.core.exceptions.exception_handler",
+    # Which X-Forwarded-For entry is the real client for rate limits. In
+    # production set it to the number of proxies that append to the header
+    # (e.g. 1 for a load balancer); unset trusts the whole header (dev only).
+    "NUM_PROXIES": int(env("NUM_PROXIES")) if env("NUM_PROXIES") else None,
+    "DEFAULT_THROTTLE_RATES": {
+        # Per client IP. Failed password attempts have their own lockout (below).
+        "auth": env("THROTTLE_AUTH", "30/min"),
+        "auth_email": env("THROTTLE_AUTH_EMAIL", "10/hour"),
+    },
 }
 
 SIMPLE_JWT = {
@@ -149,6 +162,7 @@ SIMPLE_JWT = {
     # A used refresh token can't be replayed; logout revokes the current one.
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
+    "TOKEN_REFRESH_SERIALIZER": "apps.accounts.serializers.SessionTokenRefreshSerializer",
 }
 
 SPECTACULAR_SETTINGS = {
@@ -162,7 +176,8 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", FRONTEND_URL)
 
 # --- Email ---------------------------------------------------------------------
-# Development prints emails (including magic links) to the console.
+# docker compose sends every email to Mailpit (a local inbox at
+# http://localhost:8025). Without it, development prints emails to the console.
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend"
@@ -175,12 +190,19 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "Onefold <hello@localhost>")
+EMAIL_TIMEOUT = 10
+# Shown in development so nobody has to read logs to find an email.
+DEV_MAIL_INBOX_URL = env("DEV_MAIL_INBOX_URL", "") if DEBUG else ""
 
 # --- Security --------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
 if not DEBUG:
@@ -204,9 +226,26 @@ LEARNING_CONTENT_DIR = Path(env("LEARNING_CONTENT_DIR", BASE_DIR / "content"))
 LEARNING_DEFAULT_PATH = env("LEARNING_DEFAULT_PATH", "ship-your-first-product")
 # "Check my work" requests allowed per builder per minute.
 VERIFICATION_CHECKS_PER_MINUTE = int(env("VERIFICATION_CHECKS_PER_MINUTE", "10"))
-# Magic sign-in links.
+# Emailed links: sign-in, password reset, email confirmation.
 MAGIC_LINK_TTL_MINUTES = int(env("MAGIC_LINK_TTL_MINUTES", "15"))
 MAGIC_LINK_COOLDOWN_SECONDS = int(env("MAGIC_LINK_COOLDOWN_SECONDS", "60"))
+PASSWORD_RESET_TTL_MINUTES = int(env("PASSWORD_RESET_TTL_MINUTES", "30"))
+VERIFY_EMAIL_TTL_HOURS = int(env("VERIFY_EMAIL_TTL_HOURS", "72"))
+# Failed password sign-ins: after this many for one email within the window,
+# that email is locked out until the window passes.
+LOGIN_MAX_FAILURES = int(env("LOGIN_MAX_FAILURES", "5"))
+LOGIN_LOCKOUT_MINUTES = int(env("LOGIN_LOCKOUT_MINUTES", "15"))
+
+# Sign in with GitHub / Google. A provider is offered only when both values are set.
+# Callback URL to register with the provider: FRONTEND_URL/api/auth/oauth/<provider>/callback
+GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", "")
+GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = env("GOOGLE_CLIENT_SECRET", "")
+
+# One-click "Sign in as" demo accounts on the login page. Development only:
+# it can never be on when DEBUG is off.
+DEMO_LOGIN = DEBUG and env_bool("DEMO_LOGIN", True)
 
 LOGGING = {
     "version": 1,

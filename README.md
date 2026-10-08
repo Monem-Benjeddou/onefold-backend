@@ -15,15 +15,21 @@ cp .env.example .env        # set SECRET_KEY and POSTGRES_PASSWORD
 docker compose up --build
 ```
 
-- **App: http://localhost:3000**
-- API: http://localhost:8000 · API docs: http://localhost:8000/api/docs/ · Health: /health/
+| What | Where |
+|------|-------|
+| **App** | **http://localhost:3000** |
+| Inbox (every email the app sends) | http://localhost:8025 |
+| Django admin | http://localhost:8000/admin/ |
+| API docs | http://localhost:8000/api/docs/ |
 
 On start, the `api` container migrates the database, loads the learning content
-and seeds demo data. Get the sign-in links:
+and seeds demo accounts. Nothing needs the logs:
 
-```bash
-docker compose logs api | grep -A 14 "Demo data ready"
-```
+- **Demo accounts:** the login page has a "Sign in as…" panel (development only).
+  One click signs you in. Or use the email and password `onefold`.
+- **Real accounts:** "Create an account" works for any email. Confirmation,
+  password-reset and sign-in emails land in the **local inbox** (Mailpit), and
+  the app links to it after sending one.
 
 | Account | Stage |
 |---------|-------|
@@ -31,12 +37,23 @@ docker compose logs api | grep -A 14 "Demo data ready"
 | `ada@onefold.local` | Just started (station 1) |
 | `grace@onefold.local` | At Deploy, with a failed check |
 | `linus@onefold.local` | Shipped: live URL and the "It's live." screen |
-| `admin@onefold.local` | Django admin at http://localhost:8000/admin/ (password `SEED_ADMIN_PASSWORD`, default `onefold`) |
+| `admin@onefold.local` | Django admin only (password `SEED_ADMIN_PASSWORD`, default `onefold`) |
 
-Links are single use and last 24 hours; restart the `api` container
-(`docker compose restart api`) or run `docker compose exec api python manage.py seed`
-for fresh ones. `seed --reset` rebuilds the demo accounts from scratch. Real sign-ins
-also work: while `DEBUG=1` the email (with the link) prints in `docker compose logs api`.
+`docker compose exec api python manage.py seed --reset` rebuilds the demo accounts.
+Set `SEED_DEMO_DATA=0` to skip seeding. Demo sign-in and the seeder refuse to run with `DEBUG=0`.
+
+### Signing in
+
+| Method | Notes |
+|--------|-------|
+| Email + password | Sign-up sends a confirmation link; the app works right away and shows a banner until confirmed. 5 wrong passwords lock that email for 15 minutes. |
+| Forgot password | Emailed link, single use, 30 minutes. Resetting signs out every other device. Also how link-only or GitHub accounts set a password. |
+| Email sign-in link | Single use, 15 minutes. |
+| GitHub / Google | Shown when `GITHUB_CLIENT_ID`/`_SECRET` (or `GOOGLE_…`) are set. Callback URL: `FRONTEND_URL/api/auth/oauth/<provider>/callback`. Accounts link by verified email. |
+
+Every sign-in creates a device session (`/api/v1/auth/sessions/`), which can be
+revoked one by one or all at once. Sign-ins, failures, lockouts, resets and
+sign-outs are recorded in the admin under *Sign-in events*.
 
 ### Web app without Docker
 
@@ -70,33 +87,57 @@ Checks run on Celery, so "Check my work" needs Redis and
 pytest                       # SQLite, no services needed
 TEST_USE_SQLITE=0 pytest     # against the Postgres in POSTGRES_*
 ruff check . && ruff format --check .
+(cd web && npm run typecheck && npm run build)
 ```
+
+End-to-end tests drive a real browser against the running stack (sign-up,
+onboarding with a refresh halfway, password reset through the inbox, an
+expired session mid-form, phone layout):
+
+```bash
+docker compose up -d --build
+cd e2e && npm ci && npx playwright install chromium
+npx playwright test          # WEB_URL / MAILPIT_URL default to localhost
+```
+
+CI runs all of it: lint, migrations, content, API tests on PostgreSQL, web
+typecheck and build, the end-to-end suite, and both images.
 
 ## How it's organised
 
 ```
-web/               Next.js app: landing, sign-in, onboarding, dashboard,
-                   path, steps + "Check my work", project, ship moment
+web/               Next.js app: landing, sign-in/sign-up/reset, onboarding,
+                   dashboard, path, steps + "Check my work", project, ship moment
+e2e/               Playwright end-to-end tests
 config/            settings (all env-driven), urls, celery
 apps/
   core/            base model (UUID + timestamps), /health/
-  accounts/        email users, passwordless magic-link sign-in, JWT
+  accounts/        users, password + magic-link + GitHub/Google sign-in, JWT,
+                   device sessions, lockout, sign-in audit
+  workspace/       onboarding (one transaction, saved drafts) and /workspace
   learning/        paths, stations, steps, enrollment, progress
   projects/        the builder's product: repo, live URL, ownership token
   verification/    "Check my work": check runs, executors, SSRF-safe HTTP
 content/           learning paths as Markdown + YAML (see content/README.md)
 MVP_PLAN.md        product, UX and engineering plan for the MVP
+docs/REVIEW_AND_PLAN.md   state review and the phased plan (Phase 0 + 1 done)
 ```
 
 ## API at a glance
 
 | Method | Path | What it does |
 |--------|------|--------------|
-| POST | `/api/v1/auth/magic-link/` | Email a sign-in link (always 202) |
-| POST | `/api/v1/auth/magic-link/verify/` | Exchange the link's token for JWTs |
-| POST | `/api/v1/auth/token/refresh/` | Rotate tokens |
-| POST | `/api/v1/auth/logout/` | Revoke a refresh token |
+| GET | `/api/v1/auth/config/` | Which sign-in methods are on |
+| POST | `/api/v1/auth/register/` · `/login/` | Email + password |
+| POST | `/api/v1/auth/password/forgot/` · `/reset/` · `/change/` | Password recovery and change |
+| POST | `/api/v1/auth/magic-link/` · `/magic-link/verify/` | Email sign-in link |
+| POST | `/api/v1/auth/email/verify/` · `/email/resend/` | Confirm the email address |
+| POST | `/api/v1/auth/oauth/{github,google}/start/` · `/callback/` | GitHub / Google |
+| POST | `/api/v1/auth/token/refresh/` · `/logout/` | Rotate tokens / sign this device out |
+| GET/DELETE | `/api/v1/auth/sessions/` · `/sessions/{id}/` | Signed-in devices |
 | GET/PATCH/DELETE | `/api/v1/auth/me/` | The signed-in builder |
+| GET | `/api/v1/workspace/` | Builder + enrollment + project in one call |
+| GET/POST | `/api/v1/onboarding/` · PUT `/onboarding/draft/` | Onboarding state, finish, save answers |
 | GET | `/api/v1/learning/paths/current/` | Path outline |
 | GET/POST | `/api/v1/learning/enrollment/` | Progress / enroll |
 | GET/PATCH | `/api/v1/learning/enrollment/steps/{slug}/` | Step content, save position |
@@ -105,4 +146,4 @@ MVP_PLAN.md        product, UX and engineering plan for the MVP
 | GET/POST | `/api/v1/projects/{id}/checks/` | Check history / "Check my work" |
 | GET | `/api/v1/checks/{id}/` | Poll one check |
 
-Send `Authorization: Bearer <access>` on everything except sign-in.
+Send `Authorization: Bearer <access>` on everything except sign-in. Errors carry a `code` and a `request_id` (also in the `X-Request-ID` header).

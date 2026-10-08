@@ -4,29 +4,25 @@ import { redirect } from "next/navigation";
 import { ButtonLink } from "@/components/button";
 import { Line } from "@/components/line";
 import { Symbol } from "@/components/logo";
-import { api } from "@/lib/api";
-import type { Enrollment, Page, PathOutline, Project } from "@/lib/types";
+import { api, getWorkspace } from "@/lib/api";
+import type { PathOutline } from "@/lib/types";
 
 export const metadata: Metadata = { title: "It's live." };
 
 /** The ship moment: only reachable once a Ship step has passed its check. */
 export default async function ShipPage() {
-  const [enrollment, path, projects] = await Promise.all([
-    api<Enrollment>("/learning/enrollment/", "/ship"),
-    api<PathOutline>("/learning/paths/current/", "/ship"),
-    api<Page<Project>>("/projects/", "/ship"),
-  ]);
-  if (!enrollment || !path) redirect("/onboarding");
+  const [workspace, path] = await Promise.all([getWorkspace(), api<PathOutline>("/learning/paths/current/")]);
+  const { enrollment, project } = workspace;
+  if (!workspace.onboarding_complete || !enrollment || !path) redirect("/onboarding");
 
   const shipSlugs = path.stations.flatMap((s) => s.steps.filter((step) => step.type === "ship").map((step) => step.slug));
   const shipped = enrollment.steps.some((s) => shipSlugs.includes(s.slug) && s.status === "done");
   if (!shipped) redirect("/home");
 
-  const project = projects?.results[0];
   const next = enrollment.next_step;
 
   return (
-    <main className="relative flex min-h-dvh flex-col justify-between overflow-hidden bg-[linear-gradient(135deg,var(--color-orange)_0%,var(--color-orange)_55%,var(--color-brass)_100%)] px-4 py-10 text-ink sm:px-10">
+    <main id="main" className="relative flex min-h-dvh flex-col justify-between overflow-hidden bg-[linear-gradient(135deg,var(--color-orange)_0%,var(--color-orange)_55%,var(--color-brass)_100%)] px-4 py-10 text-ink sm:px-10">
       <Symbol
         size={560}
         flap="var(--color-ink)"

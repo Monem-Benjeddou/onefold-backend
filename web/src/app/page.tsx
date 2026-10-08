@@ -36,7 +36,7 @@ export default async function Landing() {
   const signedIn = await hasSession();
 
   return (
-    <main>
+    <main id="main">
       <section className="relative overflow-hidden bg-carbon text-paper">
         <Symbol
           size={420}
@@ -55,7 +55,7 @@ export default async function Landing() {
                 <Link href="/login" className="px-2 text-sm text-carbon-muted hover:text-paper">
                   Sign in
                 </Link>
-                <ButtonLink href="/login" variant="inverse" className="py-2">
+                <ButtonLink href="/signup" variant="inverse" className="py-2">
                   Start building
                 </ButtonLink>
               </>
@@ -75,7 +75,7 @@ export default async function Landing() {
             Finish with a URL.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
-            <ButtonLink href={signedIn ? "/home" : "/login"} variant="inverse">
+            <ButtonLink href={signedIn ? "/home" : "/signup"} variant="inverse">
               Start your first build →
             </ButtonLink>
             <a href="#how" className="inline-flex min-h-11 items-center border-2 border-paper px-5 py-3 font-semibold hover:bg-paper hover:text-ink">
@@ -117,7 +117,7 @@ export default async function Landing() {
           <h2 className="font-display text-5xl font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-7xl">
             Make it exist.
           </h2>
-          <ButtonLink href={signedIn ? "/home" : "/login"} variant="dark">
+          <ButtonLink href={signedIn ? "/home" : "/signup"} variant="dark">
             Start building
           </ButtonLink>
         </div>

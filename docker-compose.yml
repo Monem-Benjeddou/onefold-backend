@@ -1,5 +1,6 @@
 # Local development: `cp .env.example .env && docker compose up --build`
-# App: http://localhost:3000  ·  API: http://localhost:8000  ·  API docs: /api/docs/
+# App: http://localhost:3000  ·  Inbox: http://localhost:8025  ·  API: http://localhost:8000
+# Every email the app sends (sign-in links, password resets) lands in the Inbox.
 
 x-app: &app
   build: .
@@ -10,12 +11,20 @@ x-app: &app
     # The web container calls the API as http://api:8000, so Django must
     # accept the "api" host too (otherwise every call is a 400 DisallowedHost).
     ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1},api
+    # Emails go to Mailpit, a local inbox you open in the browser.
+    EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+    EMAIL_HOST: mailpit
+    EMAIL_PORT: "1025"
+    EMAIL_USE_TLS: "0"
+    DEV_MAIL_INBOX_URL: http://localhost:${MAILPIT_PORT:-8025}
   volumes:
     - .:/app
   depends_on:
     db:
       condition: service_healthy
     redis:
+      condition: service_healthy
+    mailpit:
       condition: service_healthy
 
 services:
@@ -45,6 +54,20 @@ services:
       timeout: 3s
       retries: 10
 
+  # Local email inbox: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.31.2
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
   api:
     <<: *app
     # Migrate, load content, seed demo accounts (unless SEED_DEMO_DATA=0), serve.
@@ -55,30 +78,45 @@ services:
              python manage.py runserver 0.0.0.0:8000"
     ports:
       - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   worker:
     <<: *app
     command: celery -A config worker --loglevel=info --concurrency=2
 
-  # The Next.js web app, with hot reload. It talks to the API server-side.
+  # The Next.js web app, with hot reload. Dependencies are installed in the
+  # image (rebuilt by `docker compose up --build` when package.json changes),
+  # so starting it takes seconds. Only the source is mounted.
   web:
-    image: node:22-alpine
-    working_dir: /app
-    command: sh -c "npm ci && npx next dev -H 0.0.0.0 -p 3000"
+    build:
+      context: ./web
+      target: dev
     environment:
       BACKEND_URL: http://api:8000
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true"
     volumes:
-      - ./web:/app
-      - web_node_modules:/app/node_modules
-      - web_next:/app/.next
+      - ./web/src:/app/src
+      - ./web/public:/app/public
+      - ./web/next.config.ts:/app/next.config.ts:ro
+      - ./web/tsconfig.json:/app/tsconfig.json:ro
+      - ./web/postcss.config.mjs:/app/postcss.config.mjs:ro
     ports:
       - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres_data:
-  web_node_modules:
-  web_next:

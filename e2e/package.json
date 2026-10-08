@@ -1,0 +1,13 @@
+{
+  "name": "onefold-e2e",
+  "private": true,
+  "description": "End-to-end tests: a real browser against the running stack (API, web, Mailpit).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.20.5"
+  }
+}

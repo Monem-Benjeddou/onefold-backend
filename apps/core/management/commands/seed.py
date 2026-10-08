@@ -2,8 +2,8 @@
 Fill a development database with demo accounts at every stage of the path.
 
 Safe to run on every start: existing accounts and their progress are left as
-they are. Each run prints fresh sign-in links (valid 24 hours) so you can open
-any account in the web app straight away.
+they are. Every demo account signs in with the password $SEED_DEMO_PASSWORD
+(default "onefold"), or with one click from the login page in development.
 
     python manage.py seed               # runs on `docker compose up`
     python manage.py seed --reset       # wipe demo accounts and recreate them
@@ -18,17 +18,13 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.accounts.services import issue_link
+from apps.core.demo import ADMIN_EMAIL, DEMO_DOMAIN, DEMO_STAGES, demo_email
 from apps.learning import services as learning
 from apps.learning.models import Path
 from apps.projects.models import Project
 from apps.verification.models import CheckRun
 
-DEMO_DOMAIN = "onefold.local"
-ADMIN_EMAIL = f"admin@{DEMO_DOMAIN}"
-LINK_TTL_MINUTES = 60 * 24
-
-# (email, name, pace, steps finished, project). "ship" = up to and including the
+# (handle, name, pace, steps finished, project). "ship" = up to and including the
 # first Ship step, "deploy" = everything before it; None = not onboarded yet.
 BUILDERS = [
     ("new", "", "", None, None),
@@ -93,6 +89,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"Removed demo data ({deleted} rows).")
             admin_created = self._admin()
             created = [self._builder(version, *builder) for builder in BUILDERS]
+            self._passwords()
 
         self._report(admin_created, created)
 
@@ -114,13 +111,27 @@ class Command(BaseCommand):
         )
         return True
 
+    def _passwords(self):
+        """Give demo builders a password (and a confirmed email) if they lack one."""
+        password = os.environ.get("SEED_DEMO_PASSWORD", "onefold")
+        for handle in DEMO_STAGES:
+            user = User.objects.filter(email=demo_email(handle)).first()
+            if user and (not user.password or not user.has_usable_password()):
+                user.set_password(password)
+                user.email_verified_at = user.email_verified_at or timezone.now()
+                user.save(update_fields=["password", "email_verified_at", "updated"])
+
     def _builder(self, version, handle, name, pace, finished, project_data):
-        email = f"{handle}@{DEMO_DOMAIN}"
-        user, created = User.objects.get_or_create(email=email, defaults={"name": name})
+        email = demo_email(handle)
+        user, created = User.objects.get_or_create(
+            email=email, defaults={"name": name, "email_verified_at": timezone.now()}
+        )
         if not created or finished is None:
             return created
 
         enrollment, _ = learning.enroll(user, version, pace=pace)
+        enrollment.experience = "often" if finished == "ship" else "once"
+        enrollment.save(update_fields=["experience", "updated"])
         project = Project.objects.create(
             user=user,
             enrollment=enrollment,
@@ -193,25 +204,29 @@ class Command(BaseCommand):
     def _report(self, admin_created, created):
         out = self.stdout
         status = {True: "created", False: "exists"}
-        out.write("")
-        out.write(self.style.SUCCESS("Demo data ready."))
+        web_port = os.environ.get("WEB_PORT", "3000")
         api_port = os.environ.get("API_PORT", "8000")
-        out.write(
-            f"  Admin  {ADMIN_EMAIL}  ({status[admin_created]})  → http://localhost:{api_port}/admin/"
-        )
-        if admin_created:
-            out.write("         password: $SEED_ADMIN_PASSWORD (default: onefold)")
-        out.write("")
-        out.write("  Sign-in links for the web app (single use, valid 24 hours):")
-        stages = {
-            "new": "signed up, not onboarded",
-            "ada": "just started, station 1",
-            "grace": "at Deploy, a failed check",
-            "linus": "shipped, live URL",
-        }
+        inbox_port = os.environ.get("MAILPIT_PORT", "8025")
+        password = os.environ.get("SEED_DEMO_PASSWORD", "onefold")
+        lines = [
+            "Onefold is ready.",
+            "",
+            f"  App        http://localhost:{web_port}",
+            f"  Inbox      http://localhost:{inbox_port}   (every email lands here)",
+            f"  Admin      http://localhost:{api_port}/admin/   "
+            f"{ADMIN_EMAIL} ({status[admin_created]})",
+            f"  API docs   http://localhost:{api_port}/api/docs/",
+            "",
+            f"  Demo accounts (password: {password}, or one click on the login page):",
+        ]
         for (handle, *_), was_created in zip(BUILDERS, created, strict=True):
-            email = f"{handle}@{DEMO_DOMAIN}"
-            link = issue_link(email, ttl_minutes=LINK_TTL_MINUTES)
-            out.write(f"  {email:<22} {stages[handle]:<26} ({status[was_created]})")
-            out.write(f"    {link}")
+            lines.append(
+                f"    {demo_email(handle):<22} {DEMO_STAGES[handle]:<28} ({status[was_created]})"
+            )
+        width = max(len(line) for line in lines) + 2
+        out.write("")
+        out.write(self.style.SUCCESS("┌" + "─" * width + "┐"))
+        for line in lines:
+            out.write(self.style.SUCCESS("│ ") + line.ljust(width - 1) + self.style.SUCCESS("│"))
+        out.write(self.style.SUCCESS("└" + "─" * width + "┘"))
         out.write("")

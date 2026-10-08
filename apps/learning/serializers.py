@@ -125,6 +125,12 @@ class CheckSummarySerializer(serializers.Serializer):
     expect_body_contains = serializers.CharField(required=False)
 
 
+class StepRefSerializer(serializers.Serializer):
+    slug = serializers.CharField()
+    title = serializers.CharField()
+    status = serializers.CharField()
+
+
 class StepDetailSerializer(serializers.ModelSerializer):
     """A step as the builder sees it, with their progress attached."""
 
@@ -137,6 +143,8 @@ class StepDetailSerializer(serializers.ModelSerializer):
     has_check = serializers.BooleanField(source="step.has_check", read_only=True)
     station = serializers.SerializerMethodField()
     check = serializers.SerializerMethodField()
+    previous = serializers.SerializerMethodField()
+    next = serializers.SerializerMethodField()
 
     class Meta:
         model = StepProgress
@@ -154,8 +162,38 @@ class StepDetailSerializer(serializers.ModelSerializer):
             "started_at",
             "completed_at",
             "last_position",
+            "previous",
+            "next",
         ]
         read_only_fields = ["status", "started_at", "completed_at"]
+
+    def _neighbours(self, obj):
+        if not hasattr(obj, "_neighbours"):
+            ordered = list(
+                obj.enrollment.progress.select_related("step").order_by(
+                    "step__station__order", "step__order"
+                )
+            )
+            index = next(i for i, p in enumerate(ordered) if p.pk == obj.pk)
+            obj._neighbours = (
+                ordered[index - 1] if index > 0 else None,
+                ordered[index + 1] if index + 1 < len(ordered) else None,
+            )
+        return obj._neighbours
+
+    @staticmethod
+    def _ref(progress):
+        if progress is None:
+            return None
+        return {"slug": progress.step.slug, "title": progress.step.title, "status": progress.status}
+
+    @extend_schema_field(StepRefSerializer(allow_null=True))
+    def get_previous(self, obj):
+        return self._ref(self._neighbours(obj)[0])
+
+    @extend_schema_field(StepRefSerializer(allow_null=True))
+    def get_next(self, obj):
+        return self._ref(self._neighbours(obj)[1])
 
     @extend_schema_field(StationRefSerializer)
     def get_station(self, obj):

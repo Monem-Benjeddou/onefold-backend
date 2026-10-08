@@ -1,0 +1,7 @@
+{% autoescape off %}
+Sign in to Onefold
+
+{{ link }}
+
+The link works once and expires in {{ minutes }} minutes. If you didn't ask for it, ignore this email.
+{% endautoescape %}

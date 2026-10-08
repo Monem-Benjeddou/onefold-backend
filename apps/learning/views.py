@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.http import Http404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -8,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import services
-from .models import Path, PathVersion
+from .models import PathVersion
 from .serializers import (
     EnrollmentSerializer,
     EnrollRequestSerializer,
@@ -27,8 +26,7 @@ def raise_conflict(error):
 
 
 def current_path_version():
-    path = Path.objects.filter(slug=settings.LEARNING_DEFAULT_PATH).first()
-    version = path.latest_published_version() if path else None
+    version = services.current_published_version()
     if version is None:
         raise Http404("No published path yet.")
     return version

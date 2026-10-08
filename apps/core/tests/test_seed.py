@@ -1,4 +1,3 @@
-import re
 from io import StringIO
 
 import pytest
@@ -50,9 +49,23 @@ def test_seed_creates_every_stage():
     go_live = linus.enrollments.get().progress.get(step__slug="go-live")
     assert go_live.status == "done"
 
-    # Fresh sign-in links for each builder, valid for a day.
-    assert len(re.findall(r"/auth/verify\?token=", output)) == 4
-    assert MagicLink.objects.count() == 4
+    # Every builder signs in with the demo password; nothing goes through email.
+    for handle in ("new", "ada", "grace", "linus"):
+        user = User.objects.get(email=f"{handle}@onefold.local")
+        assert user.check_password("onefold") and user.email_verified
+    assert not MagicLink.objects.exists()
+    assert "http://localhost:8025" in output  # the local inbox
+    assert "ada@onefold.local" in output
+
+
+def test_demo_password_from_environment_and_old_accounts_get_one(monkeypatch):
+    seed()
+    User.objects.filter(email="ada@onefold.local").update(password="")
+    monkeypatch.setenv("SEED_DEMO_PASSWORD", "another-pass-1")
+    seed()
+    assert User.objects.get(email="ada@onefold.local").check_password("another-pass-1")
+    # Existing passwords are left alone.
+    assert User.objects.get(email="grace@onefold.local").check_password("onefold")
 
 
 def test_seed_is_idempotent():

@@ -1,0 +1,5 @@
+{% extends "accounts/email/base.html" %}
+{% block preheader %}One click to confirm this is your email.{% endblock %}
+{% block heading %}Confirm your email{% endblock %}
+{% block body %}<p style="margin:0;font-size:16px;line-height:1.6;color:#3a342c;">{% if user.name %}Hi {{ user.name }}, one{% else %}One{% endif %} click confirms <strong>{{ user.email }}</strong> is yours, so you can always get back into your account. The link lasts {{ hours }} hours.</p>{% endblock %}
+{% block cta %}Confirm my email →{% endblock %}

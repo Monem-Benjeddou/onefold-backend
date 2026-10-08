@@ -1,0 +1,5 @@
+{% extends "accounts/email/base.html" %}
+{% block preheader %}Your sign-in link. It works once, for {{ minutes }} minutes.{% endblock %}
+{% block heading %}Sign in to Onefold{% endblock %}
+{% block body %}<p style="margin:0;font-size:16px;line-height:1.6;color:#3a342c;">Use the button below to sign in. It works once and expires in {{ minutes }} minutes.</p>{% endblock %}
+{% block cta %}Sign in →{% endblock %}

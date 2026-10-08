@@ -6,6 +6,7 @@ available. Steps with a ``check_spec`` can only be finished by a passing
 check, via ``complete_step(..., verified=True)``.
 """
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -87,6 +88,12 @@ def sync_path(spec, publish=False):
 
 
 # --- Enrollment -------------------------------------------------------------
+
+
+def current_published_version():
+    """The latest published version of the default path, or None."""
+    path = Path.objects.filter(slug=settings.LEARNING_DEFAULT_PATH).first()
+    return path.latest_published_version() if path else None
 
 
 def ordered_steps(path_version):

@@ -1,101 +1,254 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
+import { Alert } from "@/components/alert";
+import { AuthHeading } from "@/components/auth/auth-shell";
+import { Divider, ProviderButtons } from "@/components/auth/providers";
 import { Button } from "@/components/button";
-import { Label } from "@/components/label";
+import { Checkbox, Field, Input, PasswordInput } from "@/components/field";
+import { MailIcon } from "@/components/icons";
 import { errorMessage } from "@/lib/client";
+import type { AuthConfig } from "@/lib/types";
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type Errors = { email?: string; password?: string; form?: string; hint?: boolean };
 
 export function LoginForm({
+  config,
   next,
+  initialEmail,
   initialError,
-  showDevHint,
+  initialMode,
+  notice,
 }: {
+  config: AuthConfig;
   next: string;
+  initialEmail: string;
   initialError: string | null;
-  showDevHint: boolean;
+  initialMode: "password" | "link";
+  notice: string | null;
 }) {
-  const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
-  const [error, setError] = useState<string | null>(initialError);
+  const [mode, setMode] = useState(initialMode);
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [errors, setErrors] = useState<Errors>(initialError ? { form: initialError } : {});
+  const [busy, setBusy] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const summary = useRef<HTMLDivElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (errors.form) summary.current?.focus();
+  }, [errors.form]);
+
+  function validate(): Errors {
+    const found: Errors = {};
+    if (!email.trim()) found.email = "Enter your email address.";
+    else if (!EMAIL.test(email.trim())) found.email = "Enter an email like you@example.com.";
+    if (mode === "password" && !password) found.password = "Enter your password.";
+    return found;
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    setState("sending");
-    setError(null);
-    const response = await fetch("/api/auth/request", {
+    const found = validate();
+    setErrors(found);
+    if (found.email) return emailRef.current?.focus();
+    if (found.password) return passwordRef.current?.focus();
+
+    setBusy(true);
+    const url = mode === "password" ? "/api/auth/login" : "/api/auth/request";
+    const body = mode === "password" ? { email: email.trim(), password, remember: remember ? "1" : "0", next } : { email: email.trim() };
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(body),
     }).catch(() => null);
+    const data = response ? await response.json().catch(() => null) : null;
+
     if (!response || !response.ok) {
-      const data = response ? await response.json().catch(() => null) : null;
-      setError(response ? errorMessage(data) : "Can't reach Onefold. Check your connection and retry.");
-      setState("idle");
+      setBusy(false);
+      const code = (data as { code?: string } | null)?.code;
+      setErrors({
+        form: response ? errorMessage(data) : "Can't reach Onefold. Check your connection and try again.",
+        hint: code === "invalid_credentials",
+      });
+      if (code === "invalid_credentials") setPassword("");
       return;
     }
-    // Remember where to land after the link (the link itself opens in a new tab).
+    if (mode === "password") {
+      // A full navigation, so the next page renders with the new session.
+      window.location.assign((data as { destination: string }).destination);
+      return;
+    }
     if (next) sessionStorage.setItem("onefold-next", next);
-    setState("sent");
+    setBusy(false);
+    setSentTo(email.trim());
   }
 
-  if (state === "sent") {
+  if (sentTo) {
     return (
-      <div className="w-full max-w-md border-2 border-ink bg-elevated p-8 shadow-hard" role="status">
-        <Label tone="patina">Link sent</Label>
-        <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.02em]">Check your inbox.</h1>
-        <p className="mt-3 leading-relaxed text-body">
-          If <strong className="text-ink">{email}</strong> can sign in, a link is on its way. It works once
-          and expires in 15 minutes.
-        </p>
-        {showDevHint && (
-          <p className="mt-5 border-l-4 border-orange bg-surface px-4 py-3 font-mono text-xs leading-relaxed text-body">
-            Running locally? The link is printed in the API logs:
-            <br />
-            docker compose logs api
-          </p>
+      <div>
+        <AuthHeading eyebrow="Link sent" title="Check your inbox.">
+          If <strong className="text-ink">{sentTo}</strong> can sign in, a link is on its way. It works once and expires in 15
+          minutes.
+        </AuthHeading>
+        {config.dev_inbox_url && (
+          <a
+            href={config.dev_inbox_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-8 flex min-h-11 w-full items-center justify-center gap-2 border-2 border-ink bg-ink px-5 py-3 font-semibold text-paper hover:bg-carbon-3"
+          >
+            <MailIcon /> Open local inbox
+          </a>
         )}
-        <button
-          type="button"
-          onClick={() => setState("idle")}
-          className="mt-6 text-sm font-semibold underline underline-offset-4"
-        >
-          Use a different email
-        </button>
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <button type="button" className="font-semibold underline underline-offset-4" onClick={() => setSentTo(null)}>
+            Use a different email
+          </button>
+          <button
+            type="button"
+            className="font-semibold underline underline-offset-4"
+            onClick={() => {
+              setSentTo(null);
+              setMode("password");
+            }}
+          >
+            Sign in with a password
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="w-full max-w-md border-2 border-ink bg-elevated p-8 shadow-hard" noValidate>
-      <Label>Sign in · no password</Label>
-      <h1 className="mt-3 font-display text-3xl font-bold tracking-[-0.02em]">Start building.</h1>
-      <p className="mt-2 text-body">New or returning, it&rsquo;s the same: we email you a sign-in link.</p>
+    <div>
+      <AuthHeading eyebrow="Welcome back" title="Sign in to Onefold">
+        {mode === "password" ? "Pick up your build where you left it." : "We'll email you a link that signs you in. No password needed."}
+      </AuthHeading>
 
-      <label htmlFor="email" className="mt-8 block text-sm font-semibold">
-        Email
-      </label>
-      <input
-        id="email"
-        type="email"
-        autoComplete="email"
-        autoFocus
-        required
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? "login-error" : undefined}
-        className="mt-2 block w-full border-2 border-ink bg-paper px-4 py-3 text-base outline-none focus:border-orange"
-        placeholder="you@example.com"
-      />
-      {error && (
-        <p id="login-error" role="alert" className="mt-3 text-sm font-medium text-error">
-          {error}
-        </p>
+      {notice && !errors.form && (
+        <Alert tone="info" className="mt-6">
+          {notice}
+        </Alert>
       )}
-      <Button type="submit" className="mt-6 w-full" disabled={state === "sending" || !email.includes("@")}>
-        {state === "sending" ? "Sending…" : "Email me a link"}
-      </Button>
-    </form>
+      {errors.form && (
+        <div ref={summary} tabIndex={-1} className="mt-6 outline-none">
+          <Alert tone="error" title={errors.form}>
+            {errors.hint && (
+              <>
+                Signed up with an email link or GitHub? Use that again, or{" "}
+                <Link href={`/forgot-password?email=${encodeURIComponent(email)}`} className="font-semibold underline underline-offset-4">
+                  set a password
+                </Link>
+                .
+              </>
+            )}
+          </Alert>
+        </div>
+      )}
+
+      {config.providers.length > 0 && (
+        <>
+          <div className="mt-8">
+            <ProviderButtons providers={config.providers} next={next} />
+          </div>
+          <Divider>or with email</Divider>
+        </>
+      )}
+
+      <form
+        action={mode === "password" ? "/api/auth/login" : undefined}
+        method="post"
+        onSubmit={submit}
+        noValidate
+        className={`space-y-5 ${config.providers.length ? "" : "mt-8"}`}
+      >
+        <input type="hidden" name="next" value={next} />
+        <Field label="Email" error={errors.email}>
+          {(a11y) => (
+            <Input
+              {...a11y}
+              ref={emailRef}
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="username"
+              autoFocus={!initialEmail}
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+            />
+          )}
+        </Field>
+
+        {mode === "password" && (
+          <>
+            <Field
+              label="Password"
+              error={errors.password}
+              aside={
+                <Link
+                  href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                  className="text-sm font-semibold text-orange-dark underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              }
+            >
+              {(a11y) => (
+                <PasswordInput
+                  {...a11y}
+                  ref={passwordRef}
+                  name="password"
+                  autoComplete="current-password"
+                  autoFocus={Boolean(initialEmail)}
+                  required
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              )}
+            </Field>
+            <Checkbox
+              name="remember"
+              value="1"
+              checked={remember}
+              onChange={(event) => setRemember(event.target.checked)}
+              label="Keep me signed in on this device"
+            />
+          </>
+        )}
+
+        <Button type="submit" className="w-full" loading={busy} loadingText={mode === "password" ? "Signing in…" : "Sending…"}>
+          {mode === "password" ? "Sign in" : "Email me a sign-in link"}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm">
+        <button
+          type="button"
+          className="inline-flex min-h-11 items-center gap-2 font-semibold text-ink underline-offset-4 hover:underline"
+          onClick={() => {
+            setErrors({});
+            setMode(mode === "password" ? "link" : "password");
+          }}
+        >
+          {mode === "password" ? (
+            <>
+              <MailIcon size={16} /> Email me a sign-in link instead
+            </>
+          ) : (
+            "Sign in with a password instead"
+          )}
+        </button>
+      </p>
+    </div>
   );
 }

@@ -1,36 +1,27 @@
 import type { Metadata } from "next";
 
 import { Label } from "@/components/label";
-import { api } from "@/lib/api";
-import type { CheckRun, Page, Project } from "@/lib/types";
+import { RelativeTime } from "@/components/relative-time";
+import { StatusPill } from "@/components/status-pill";
+import { api, getWorkspace } from "@/lib/api";
+import type { CheckRun, Page } from "@/lib/types";
 
 import { ProjectForm } from "./project-form";
 import { TokenBox } from "./token-box";
 
 export const metadata: Metadata = { title: "Project" };
 
-const STATUS_STYLE: Record<CheckRun["status"], string> = {
-  passed: "text-success",
-  failed: "text-error",
-  error: "text-warning",
-  queued: "text-muted",
-  running: "text-muted",
-};
-
 export default async function ProjectPage() {
-  const projects = await api<Page<Project>>("/projects/", "/project");
-  const project = projects?.results[0] ?? null;
-  const checks = project ? await api<Page<CheckRun>>(`/projects/${project.id}/checks/`, "/project") : null;
+  const { project } = await getWorkspace();
+  const checks = project ? await api<Page<CheckRun>>(`/projects/${project.id}/checks/`) : null;
 
   return (
     <div className="mx-auto max-w-4xl">
       <Label tone="muted">Your project</Label>
-      <h1 className="mt-2 font-display text-4xl font-bold tracking-[-0.03em] sm:text-5xl">
-        {project?.name ?? "Create your project"}
-      </h1>
+      <h1 className="mt-2 font-display text-4xl font-bold tracking-[-0.03em] sm:text-5xl">{project?.name ?? "Your project"}</h1>
       <p className="mt-3 max-w-2xl text-body">
-        This is the product you&rsquo;re shipping. Checks run against it, and when it&rsquo;s live, this is what goes
-        on your launch card.
+        This is the product you&rsquo;re shipping. Checks run against it, and when it&rsquo;s live, this is what goes on your
+        launch card.
       </p>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
@@ -46,19 +37,17 @@ export default async function ProjectPage() {
           {checks && checks.results.length > 0 ? (
             <ul className="mt-4 divide-y divide-line border-y border-line">
               {checks.results.map((run) => (
-                <li key={run.id} className="flex flex-wrap items-center gap-x-6 gap-y-1 py-3 text-sm">
-                  <span className={`w-16 font-mono text-xs font-semibold uppercase ${STATUS_STYLE[run.status]}`}>{run.status}</span>
-                  <span className="font-semibold">{run.step.replace(/-/g, " ")}</span>
-                  <span className="flex-1 truncate text-muted">{run.result.reasons?.[0] ?? run.result.checked ?? ""}</span>
-                  <time className="font-mono text-xs text-muted" dateTime={run.created} title={new Date(run.created).toUTCString()}>
-                    {new Date(run.created).toISOString().slice(0, 16).replace("T", " ")} UTC
-                  </time>
+                <li key={run.id} className="grid gap-x-6 gap-y-1 py-3 text-sm sm:grid-cols-[7rem_minmax(0,14rem)_1fr_auto] sm:items-center">
+                  <StatusPill status={run.status} className="justify-self-start" />
+                  <span className="font-semibold">{run.step_title}</span>
+                  <span className="truncate text-muted">{run.result.reasons?.[0] ?? run.result.checked ?? ""}</span>
+                  <RelativeTime iso={run.created} className="font-mono text-xs text-muted" />
                 </li>
               ))}
             </ul>
           ) : (
             <p className="mt-4 border-2 border-dashed border-line p-6 text-center text-muted">
-              Nothing checked yet. Your first &ldquo;Check my work&rdquo; shows up here.
+              Nothing checked yet. Your first &ldquo;Check my work&rdquo; shows up here, with what we checked and what we saw.
             </p>
           )}
         </section>

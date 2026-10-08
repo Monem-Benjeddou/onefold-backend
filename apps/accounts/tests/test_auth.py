@@ -116,7 +116,7 @@ def test_logout_revokes_the_refresh_token(client):
         f"{BASE}/magic-link/verify/", {"token": token_from_email(mail.outbox[0])}
     ).json()
 
-    assert client.post(f"{BASE}/logout/", {"refresh": data["refresh"]}).status_code == 200
+    assert client.post(f"{BASE}/logout/", {"refresh": data["refresh"]}).status_code == 204
     assert client.post(f"{BASE}/token/refresh/", {"refresh": data["refresh"]}).status_code == 401
 
 

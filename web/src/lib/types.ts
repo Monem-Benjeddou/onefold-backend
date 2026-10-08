@@ -1,4 +1,32 @@
-export type User = { id: string; email: string; name: string; created: string };
+export type User = {
+  id: string;
+  email: string;
+  name: string;
+  created: string;
+  email_verified: boolean;
+  has_password: boolean;
+  onboarding_complete: boolean;
+  connected: string[];
+};
+
+export type SignIn = {
+  access: string;
+  refresh: string;
+  created: boolean;
+  user: User;
+  next?: string;
+};
+
+export type AuthConfig = {
+  password: boolean;
+  magic_link: boolean;
+  providers: ("github" | "google")[];
+  demo: boolean;
+  dev_inbox_url: string;
+  password_min_length: number;
+};
+
+export type DemoAccount = { email: string; name: string; stage: string };
 
 export type StepType = "learn" | "build" | "check" | "ship";
 export type StepStatus = "locked" | "available" | "in_progress" | "done" | "skipped";
@@ -50,6 +78,8 @@ export type Enrollment = {
   totals: { done: number; total: number };
 };
 
+export type StepRef = { slug: string; title: string; status: StepStatus };
+
 export type StepDetail = StepOutline & {
   body_md: string;
   station: { order: number; slug: string; title: string; role: string };
@@ -64,6 +94,8 @@ export type StepDetail = StepOutline & {
   started_at: string | null;
   completed_at: string | null;
   last_position: number;
+  previous: StepRef | null;
+  next: StepRef | null;
 };
 
 export type Project = {
@@ -80,12 +112,42 @@ export type Project = {
   updated: string;
 };
 
+export type Workspace = {
+  user: User;
+  onboarding_complete: boolean;
+  enrollment: Enrollment | null;
+  project: Project | null;
+};
+
+export type Choice = { value: string; label: string };
+
+export type Starter = { slug: string; name: string; idea: string; summary: string; builds: string[] };
+
+export type OnboardingDraft = Partial<{
+  idea: string;
+  pace: string;
+  experience: string;
+  starter: string;
+  project_name: string;
+  project_idea: string;
+}>;
+
+export type OnboardingState = {
+  complete: boolean;
+  step: number;
+  draft: OnboardingDraft;
+  starters: Starter[];
+  paces: Choice[];
+  experiences: Choice[];
+};
+
 export type CheckStatus = "queued" | "running" | "passed" | "failed" | "error";
 
 export type CheckRun = {
   id: string;
   project: string;
   step: string;
+  step_title: string;
   kind: string;
   status: CheckStatus;
   result: {

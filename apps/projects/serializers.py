@@ -11,6 +11,14 @@ from .models import Project
 REPO_NAME = re.compile(r"^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$")
 
 
+def unique_project_slug(user, name):
+    base = slugify(name)[:70] or "project"
+    slug, n = base, 2
+    while Project.objects.filter(user=user, slug=slug).exists():
+        slug, n = f"{base}-{n}", n + 1
+    return slug
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
@@ -53,16 +61,9 @@ class ProjectSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Remove the username and password from the URL.")
         return value.rstrip("/")
 
-    def _unique_slug(self, user, name):
-        base = slugify(name)[:70]
-        slug, n = base, 2
-        while Project.objects.filter(user=user, slug=slug).exists():
-            slug, n = f"{base}-{n}", n + 1
-        return slug
-
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["user"] = user
-        validated_data["slug"] = self._unique_slug(user, validated_data["name"])
+        validated_data["slug"] = unique_project_slug(user, validated_data["name"])
         validated_data["enrollment"] = get_active_enrollment(user)
         return super().create(validated_data)

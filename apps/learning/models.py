@@ -122,6 +122,11 @@ class Enrollment(TimeStampedModel):
         STEADY = "5-8", "5–8 hours a week"
         INTENSE = "10+", "10+ hours a week"
 
+    class Experience(models.TextChoices):
+        NEVER = "never", "Never deployed anything"
+        ONCE = "once", "Deployed once or twice"
+        OFTEN = "often", "Deploys often"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="enrollments"
     )
@@ -130,6 +135,8 @@ class Enrollment(TimeStampedModel):
     )
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     pace = models.CharField(max_length=4, choices=Pace.choices, blank=True)
+    # Adjusts how much hint detail steps show; never gates anything.
+    experience = models.CharField(max_length=6, choices=Experience.choices, blank=True)
 
     class Meta:
         ordering = ["-created"]

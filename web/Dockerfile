@@ -1,8 +1,16 @@
-# Production image for the Onefold web app (Next.js standalone output).
+# Onefold web app. The default (last) stage is the production image
+# (Next.js standalone output); `target: dev` is used by docker compose.
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+
+# Development: dependencies baked in, source mounted by docker compose.
+FROM deps AS dev
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY . .
+EXPOSE 3000
+CMD ["npx", "next", "dev", "-H", "0.0.0.0", "-p", "3000"]
 
 FROM node:22-alpine AS build
 WORKDIR /app

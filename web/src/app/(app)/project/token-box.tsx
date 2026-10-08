@@ -13,7 +13,7 @@ export function TokenBox({ token }: { token: string }) {
   }
   return (
     <div className="self-start border-2 border-ink bg-carbon p-6 text-paper shadow-hard-orange">
-      <Label className="text-orange">Verification token</Label>
+      <Label tone="on-dark">Verification token</Label>
       <p className="mt-3 text-sm text-carbon-muted">
         Return this from <code className="font-mono text-paper">GET /health</code> on your live app. It proves the URL is
         yours.
