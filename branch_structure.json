@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "backup/pre-forcepush-2026-10-16/main",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "backup/pre-forcepush-2026-10-16/main": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "backup/pre-forcepush-2026-10-16/main",
+    "origin"
+  ]
+}
